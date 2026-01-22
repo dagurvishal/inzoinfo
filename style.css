@@ -22,12 +22,17 @@ body.wallpaper {
   position: fixed;
   inset: 0;
   z-index: -3;
+
   background-image:
-    radial-gradient(circle at 20% 10%, rgba(255,213,74,0.18), transparent 45%),
-    radial-gradient(circle at 80% 20%, rgba(145,70,255,0.20), transparent 50%),
-    radial-gradient(circle at 40% 90%, rgba(0,255,163,0.10), transparent 55%),
-    linear-gradient(180deg, #05070C 0%, #070A0F 40%, #05070C 100%);
-  filter: blur(0px);
+    linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.85)),
+    url("./wallpaper.jpg");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  transform: scale(1.05);
+  filter: blur(6px);
 }
 
 .bgNoise {
