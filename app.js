@@ -1,52 +1,89 @@
 /***********************
   CONFIG (EDIT THIS)
 ************************/
-const SUPABASE_URL = https://ehnkxlccztcjqznuwtto.supabase.co;
-const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc;
+const SUPABASE_URL = "https://ehnkxlccztcjqznuwtto.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc";
 
-// Telegram (Option B - Unsafe but fast)
-const TELEGRAM_BOT_TOKEN = 8510667394:AAHbrRr_4c16sX4kep97ak46mfhJF2cKTNo;
+// Telegram (Option B - token visible)
+const TELEGRAM_BOT_TOKEN = "8510667394:AAHbrRr_4c16sX4kep97ak46mfhJF2cKTNo";
 const TELEGRAM_CHAT_ID = "8397321681";
 
+// Storage buckets
+const POSTERS_BUCKET = "posters";
+const REQUESTS_BUCKET = "requests"; // create this bucket too (public)
+
 /***********************
-  Supabase Client (No library)
+  Supabase REST helpers
 ************************/
-async function supabaseSelectMovies() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/movies?select=*&order=created_at.desc`, {
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}${path}`, {
+    ...options,
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      ...(options.headers || {})
     }
   });
-  return await res.json();
+
+  // try parse json safely
+  const text = await res.text();
+  let data = null;
+  try { data = JSON.parse(text); } catch { data = text; }
+
+  if (!res.ok) {
+    console.log("Supabase error:", res.status, data);
+    throw new Error(typeof data === "string" ? data : JSON.stringify(data));
+  }
+
+  return data;
+}
+
+async function supabaseSelectMovies() {
+  return await sbFetch(`/rest/v1/movies?select=*&order=created_at.desc`);
 }
 
 async function supabaseInsertMovie(movie) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/movies`, {
+  return await sbFetch(`/rest/v1/movies`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       Prefer: "return=representation"
     },
     body: JSON.stringify(movie)
   });
-  return await res.json();
 }
 
 async function supabaseInsertRequest(req) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
+  return await sbFetch(`/rest/v1/requests`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       Prefer: "return=representation"
     },
     body: JSON.stringify(req)
   });
-  return await res.json();
+}
+
+/***********************
+  Storage Upload (Supabase)
+************************/
+async function uploadToBucket(bucketName, file) {
+  const fileExt = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const safeName = `${Date.now()}-${Math.random().toString(16).slice(2)}.${fileExt}`;
+  const filePath = `${safeName}`;
+
+  // Upload
+  await sbFetch(`/storage/v1/object/${bucketName}/${filePath}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": file.type || "application/octet-stream"
+    },
+    body: file
+  });
+
+  // Public URL
+  const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${filePath}`;
+  return publicUrl;
 }
 
 /***********************
@@ -56,14 +93,13 @@ function normalizeText(s) {
   return (s || "").toLowerCase().replace(/\s+/g, "").trim();
 }
 
-// Simple fuzzy match: checks if query letters mostly appear in name
+// Fuzzy match: typo support
 function fuzzyMatch(name, query) {
   const a = normalizeText(name);
   const b = normalizeText(query);
   if (!b) return true;
   if (a.includes(b)) return true;
 
-  // basic similarity: count matching chars in order
   let i = 0, j = 0, match = 0;
   while (i < a.length && j < b.length) {
     if (a[i] === b[j]) { match++; j++; }
@@ -79,7 +115,6 @@ function categoryLabel(cat) {
 
 function toYouTubeEmbed(url) {
   if (!url) return "";
-  // supports watch?v= and youtu.be/
   let id = "";
   try {
     const u = new URL(url);
@@ -104,7 +139,7 @@ const grid = document.getElementById("moviesGrid");
 const emptyState = document.getElementById("emptyState");
 const searchInput = document.getElementById("searchInput");
 
-// Modal elements (only if on index)
+// Modal elements (index only)
 const modalOverlay = document.getElementById("modalOverlay");
 const closeModal = document.getElementById("closeModal");
 const modalTitle = document.getElementById("modalTitle");
@@ -165,7 +200,7 @@ function openMovie(movie) {
 
 function closeMovieModal() {
   modalOverlay.classList.add("hidden");
-  modalTrailer.src = ""; // stop playing
+  modalTrailer.src = "";
 }
 
 async function loadMoviesFromSupabase() {
@@ -178,18 +213,8 @@ async function loadMoviesFromSupabase() {
 }
 
 /***********************
-  Request Popup + Telegram
+  Telegram Send
 ************************/
-const requestOverlay = document.getElementById("requestOverlay");
-const openRequest = document.getElementById("openRequest");
-const closeRequest = document.getElementById("closeRequest");
-const cancelRequestBtn = document.getElementById("cancelRequestBtn");
-const sendRequestBtn = document.getElementById("sendRequestBtn");
-
-function closeReqPopup(){
-  requestOverlay.classList.add("hidden");
-}
-
 async function sendTelegramRequest({ movieName, photoUrl, movieUrl }) {
   const text =
 `🎬 New Movie Request
@@ -213,13 +238,28 @@ async function sendTelegramRequest({ movieName, photoUrl, movieUrl }) {
 }
 
 /***********************
-  Admin Page Logic
+  Request Popup (with photo upload)
+************************/
+const requestOverlay = document.getElementById("requestOverlay");
+const openRequest = document.getElementById("openRequest");
+const closeRequest = document.getElementById("closeRequest");
+const cancelRequestBtn = document.getElementById("cancelRequestBtn");
+const sendRequestBtn = document.getElementById("sendRequestBtn");
+
+function closeReqPopup(){
+  requestOverlay.classList.add("hidden");
+}
+
+/***********************
+  Admin Page Logic (Poster Upload)
 ************************/
 async function initAdminPage() {
   const form = document.getElementById("movieForm");
   const adminList = document.getElementById("adminList");
+  const adminStatus = document.getElementById("adminStatus");
+  const saveBtn = document.getElementById("saveMovieBtn");
 
-  if (!form) return; // not admin page
+  if (!form) return;
 
   async function refreshAdminList() {
     const movies = await supabaseSelectMovies();
@@ -243,23 +283,37 @@ async function initAdminPage() {
 
     const name = document.getElementById("movieName").value.trim();
     const category = document.getElementById("movieCategory").value;
-    const poster_url = document.getElementById("moviePoster").value.trim();
+    const posterFile = document.getElementById("moviePosterFile").files[0];
     const trailer_url = document.getElementById("movieTrailer").value.trim();
     const download_url = document.getElementById("movieDownload").value.trim();
 
-    if (!name || !poster_url || !trailer_url || !download_url) {
+    if (!name || !posterFile || !trailer_url || !download_url) {
       alert("All fields required!");
       return;
     }
 
     try {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Uploading...";
+
+      adminStatus.textContent = "Uploading poster...";
+      const poster_url = await uploadToBucket(POSTERS_BUCKET, posterFile);
+
+      adminStatus.textContent = "Saving movie...";
       await supabaseInsertMovie({ name, category, poster_url, trailer_url, download_url });
+
+      adminStatus.textContent = "Movie saved ✅";
       alert("Movie saved ✅");
+
       form.reset();
       await refreshAdminList();
     } catch (err) {
       console.log(err);
+      adminStatus.textContent = "Failed ❌ (check Supabase policies)";
       alert("Failed to save ❌");
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save Movie";
     }
   });
 
@@ -274,12 +328,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (grid) {
     await loadMoviesFromSupabase();
 
-    // Search
     if (searchInput) {
       searchInput.addEventListener("input", () => renderMovies());
     }
 
-    // Tabs
     tabs.forEach(t => {
       t.addEventListener("click", () => {
         tabs.forEach(x => x.classList.remove("active"));
@@ -289,7 +341,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     });
 
-    // Modal close
     closeModal.addEventListener("click", closeMovieModal);
     modalOverlay.addEventListener("click", (e) => {
       if (e.target === modalOverlay) closeMovieModal();
@@ -302,8 +353,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     sendRequestBtn.addEventListener("click", async () => {
       const movieName = document.getElementById("reqMovieName").value.trim();
-      const photoUrl = document.getElementById("reqPhotoUrl").value.trim();
       const movieUrl = document.getElementById("reqMovieUrl").value.trim();
+      const reqFile = document.getElementById("reqPhotoFile").files[0];
 
       if (!movieName) {
         alert("Movie name required!");
@@ -311,10 +362,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       try {
-        // Save in Supabase
+        let photoUrl = null;
+
+        if (reqFile) {
+          photoUrl = await uploadToBucket(REQUESTS_BUCKET, reqFile);
+        }
+
+        // Save request in Supabase
         await supabaseInsertRequest({
           movie_name: movieName,
-          photo_url: photoUrl || null,
+          photo_url: photoUrl,
           movie_url: movieUrl || null,
           user_query: (searchInput?.value || "").trim()
         });
@@ -326,8 +383,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         closeReqPopup();
 
         document.getElementById("reqMovieName").value = "";
-        document.getElementById("reqPhotoUrl").value = "";
         document.getElementById("reqMovieUrl").value = "";
+        document.getElementById("reqPhotoFile").value = "";
       } catch (e) {
         console.log(e);
         alert("Failed to send request ❌");
