@@ -2,10 +2,12 @@
   CONFIG (EDIT THIS)
 ************************/
 const SUPABASE_URL = "https://ehnkxlccztcjqznuwtto.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc";
 
-const TELEGRAM_BOT_TOKEN = "8510667394:AAHbrRr_4c16sX4kep97ak46mfhJF2cKTNo";
-const TELEGRAM_CHAT_ID = "8397321681";
+// ❌ Browser se Telegram hit karna CORS ki wajah se fail hoga.
+// const TELEGRAM_BOT_TOKEN = "....";
+// const TELEGRAM_CHAT_ID = "....";
 
 const POSTERS_BUCKET = "posters";
 const REQUESTS_BUCKET = "requests";
@@ -19,13 +21,17 @@ async function sbFetch(path, options = {}) {
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      ...(options.headers || {})
-    }
+      ...(options.headers || {}),
+    },
   });
 
   const text = await res.text();
   let data = null;
-  try { data = JSON.parse(text); } catch { data = text; }
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
 
   if (!res.ok) {
     console.log("Supabase error:", res.status, data);
@@ -43,9 +49,9 @@ async function supabaseInsertMovie(movie) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Prefer: "return=representation"
+      Prefer: "return=representation",
     },
-    body: JSON.stringify(movie)
+    body: JSON.stringify(movie),
   });
 }
 
@@ -54,9 +60,9 @@ async function supabaseInsertRequest(req) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Prefer: "return=representation"
+      Prefer: "return=representation",
     },
-    body: JSON.stringify(req)
+    body: JSON.stringify(req),
   });
 }
 
@@ -71,7 +77,7 @@ async function uploadToBucket(bucketName, file) {
   await sbFetch(`/storage/v1/object/${bucketName}/${filePath}`, {
     method: "POST",
     headers: { "Content-Type": file.type || "application/octet-stream" },
-    body: file
+    body: file,
   });
 
   return `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${filePath}`;
@@ -90,9 +96,14 @@ function fuzzyMatch(name, query) {
   if (!b) return true;
   if (a.includes(b)) return true;
 
-  let i = 0, j = 0, match = 0;
+  let i = 0,
+    j = 0,
+    match = 0;
   while (i < a.length && j < b.length) {
-    if (a[i] === b[j]) { match++; j++; }
+    if (a[i] === b[j]) {
+      match++;
+      j++;
+    }
     i++;
   }
   return match >= Math.max(3, Math.floor(b.length * 0.6));
@@ -109,8 +120,14 @@ function toYouTubeEmbed(url) {
     const u = new URL(url);
     if (u.hostname.includes("youtu.be")) id = u.pathname.replace("/", "");
     else id = u.searchParams.get("v") || "";
-  } catch { return ""; }
-  return id ? `https://www.youtube.com/embed/${id}` : "";
+  } catch {
+    return "";
+  }
+
+  // Autoplay + sound try (browser allow only after user interaction)
+  return id
+    ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=0&playsinline=1`
+    : "";
 }
 
 /***********************
@@ -186,7 +203,7 @@ function renderTrending() {
   trendingRow.innerHTML = "";
 
   const list = allMovies.slice(0, 8);
-  list.forEach(m => {
+  list.forEach((m) => {
     const c = document.createElement("div");
     c.className = "trendCard";
     c.innerHTML = `
@@ -208,9 +225,7 @@ function renderSuggestions(query) {
     return;
   }
 
-  const matches = allMovies
-    .filter(m => fuzzyMatch(m.name, q))
-    .slice(0, 5);
+  const matches = allMovies.filter((m) => fuzzyMatch(m.name, q)).slice(0, 5);
 
   if (matches.length === 0) {
     suggestions.classList.add("hidden");
@@ -219,7 +234,7 @@ function renderSuggestions(query) {
   }
 
   suggestions.innerHTML = "";
-  matches.forEach(m => {
+  matches.forEach((m) => {
     const item = document.createElement("div");
     item.className = "suggItem";
     item.innerHTML = `
@@ -242,7 +257,7 @@ function renderMovies() {
   if (!grid) return;
 
   const q = searchInput ? searchInput.value.trim() : "";
-  const filtered = allMovies.filter(m => {
+  const filtered = allMovies.filter((m) => {
     return m.category === activeTab && fuzzyMatch(m.name, q);
   });
 
@@ -256,7 +271,7 @@ function renderMovies() {
   }
   emptyState.classList.add("hidden");
 
-  filtered.forEach(movie => {
+  filtered.forEach((movie) => {
     const card = document.createElement("div");
     card.className = "movieCard";
     card.innerHTML = `
@@ -271,9 +286,16 @@ function renderMovies() {
   });
 }
 
+/***********************
+  Movie Modal
+************************/
 function closeMovieModal() {
+  if (!modalOverlay) return;
   modalOverlay.classList.add("hidden");
-  modalTrailer.src = "";
+
+  // stop trailer
+  if (modalTrailer) modalTrailer.src = "";
+
   selectedMovie = null;
 }
 
@@ -282,6 +304,8 @@ function openMovie(movie) {
 
   modalTitle.textContent = movie.name;
   modalCategory.textContent = categoryLabel(movie.category);
+
+  // autoplay with sound try
   modalTrailer.src = toYouTubeEmbed(movie.trailer_url);
 
   if (modalPosterBg) {
@@ -292,10 +316,10 @@ function openMovie(movie) {
   if (relatedRow) {
     relatedRow.innerHTML = "";
     const rel = allMovies
-      .filter(x => x.category === movie.category && x.id !== movie.id)
+      .filter((x) => x.category === movie.category && x.id !== movie.id)
       .slice(0, 8);
 
-    rel.forEach(r => {
+    rel.forEach((r) => {
       const rc = document.createElement("div");
       rc.className = "relCard";
       rc.innerHTML = `
@@ -344,7 +368,6 @@ async function shareMovie(movie) {
   const url = window.location.href;
   const text = `🎬 ${movie.name}\nWatch on INZOINFO:\n${url}`;
 
-  // Web Share API
   if (navigator.share) {
     try {
       await navigator.share({ title: movie.name, text, url });
@@ -352,31 +375,30 @@ async function shareMovie(movie) {
     } catch {}
   }
 
-  // WhatsApp fallback
   const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
   window.open(wa, "_blank");
 }
 
 /***********************
-  Telegram Request
+  Request Modal (FIXED)
 ************************/
-async function sendTelegramRequest({ movieName, photoUrl, movieUrl }) {
-  const text =
-`🎬 New Movie Request
+function resetRequestForm() {
+  const nameEl = document.getElementById("reqMovieName");
+  const urlEl = document.getElementById("reqMovieUrl");
+  const fileEl = document.getElementById("reqPhotoFile");
 
-📌 Name: ${movieName}
-🖼 Photo: ${photoUrl || "Not provided"}
-🔗 URL: ${movieUrl || "Not provided"}`;
+  if (nameEl) nameEl.value = "";
+  if (urlEl) urlEl.value = "";
+  if (fileEl) fileEl.value = "";
+}
 
-  const apiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+function closeRequestModal() {
+  requestOverlay.classList.add("hidden");
+  resetRequestForm();
+}
 
-  const res = await fetch(apiUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text })
-  });
-
-  return await res.json();
+function openRequestModal() {
+  requestOverlay.classList.remove("hidden");
 }
 
 /***********************
@@ -409,7 +431,7 @@ async function initAdminPage() {
   async function refreshAdminList() {
     const movies = await supabaseSelectMovies();
     adminList.innerHTML = "";
-    movies.forEach(m => {
+    movies.forEach((m) => {
       const row = document.createElement("div");
       row.className = "adminItem";
       row.innerHTML = `
@@ -454,11 +476,16 @@ async function initAdminPage() {
         category,
         poster_url,
         trailer_url,
-        download_url: download_720 || download_480 || download_1080 || download_4k || trailer_url,
+        download_url:
+          download_720 ||
+          download_480 ||
+          download_1080 ||
+          download_4k ||
+          trailer_url,
         download_480,
         download_720,
         download_1080,
-        download_4k
+        download_4k,
       });
 
       adminStatus.textContent = "Movie saved ✅";
@@ -493,23 +520,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     document.addEventListener("click", (e) => {
-      // close suggestions when click outside
       if (!e.target.closest(".searchWrap")) {
         suggestions.classList.add("hidden");
       }
     });
 
-    tabs.forEach(t => {
+    tabs.forEach((t) => {
       t.addEventListener("click", () => {
         const tab = t.dataset.tab;
 
-        // 18+ confirm
         if (tab === "ADULT") {
           adultOverlay.classList.remove("hidden");
           return;
         }
 
-        tabs.forEach(x => x.classList.remove("active"));
+        tabs.forEach((x) => x.classList.remove("active"));
         t.classList.add("active");
         activeTab = tab;
         renderMovies();
@@ -521,12 +546,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     adultCancel.addEventListener("click", () => adultOverlay.classList.add("hidden"));
     adultContinue.addEventListener("click", () => {
       adultOverlay.classList.add("hidden");
-      tabs.forEach(x => x.classList.remove("active"));
+      tabs.forEach((x) => x.classList.remove("active"));
       document.querySelector(`.tab[data-tab="ADULT"]`).classList.add("active");
       activeTab = "ADULT";
       renderMovies();
     });
 
+    // Movie modal close
     closeModal.addEventListener("click", closeMovieModal);
     modalOverlay.addEventListener("click", (e) => {
       if (e.target === modalOverlay) closeMovieModal();
@@ -544,10 +570,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (selectedMovie) shareMovie(selectedMovie);
     });
 
-    // Request popup
-    openRequest.addEventListener("click", () => requestOverlay.classList.remove("hidden"));
-    closeRequest.addEventListener("click", () => requestOverlay.classList.add("hidden"));
-    cancelRequestBtn.addEventListener("click", () => requestOverlay.classList.add("hidden"));
+    // Request popup (FIXED)
+    openRequest.addEventListener("click", () => openRequestModal());
+    closeRequest.addEventListener("click", () => closeRequestModal());
+    cancelRequestBtn.addEventListener("click", () => closeRequestModal());
+
+    requestOverlay.addEventListener("click", (e) => {
+      if (e.target === requestOverlay) closeRequestModal();
+    });
 
     sendRequestBtn.addEventListener("click", async () => {
       const movieName = document.getElementById("reqMovieName").value.trim();
@@ -560,6 +590,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       try {
+        sendRequestBtn.disabled = true;
+        sendRequestBtn.textContent = "Sending...";
+
         let photoUrl = null;
         if (reqFile) photoUrl = await uploadToBucket(REQUESTS_BUCKET, reqFile);
 
@@ -567,19 +600,20 @@ document.addEventListener("DOMContentLoaded", async () => {
           movie_name: movieName,
           photo_url: photoUrl,
           movie_url: movieUrl || null,
-          user_query: (searchInput?.value || "").trim()
+          user_query: (searchInput?.value || "").trim(),
         });
 
-        await sendTelegramRequest({ movieName, photoUrl, movieUrl });
+        // ❌ Telegram removed (CORS issue)
+        // await sendTelegramRequest({ movieName, photoUrl, movieUrl });
 
         alert("Request sent ✅");
-        requestOverlay.classList.add("hidden");
-        document.getElementById("reqMovieName").value = "";
-        document.getElementById("reqMovieUrl").value = "";
-        document.getElementById("reqPhotoFile").value = "";
+        closeRequestModal();
       } catch (e) {
         console.log(e);
         alert("Failed to send request ❌");
+      } finally {
+        sendRequestBtn.disabled = false;
+        sendRequestBtn.textContent = "Send Request";
       }
     });
   }
