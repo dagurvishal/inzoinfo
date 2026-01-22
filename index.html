@@ -6,10 +6,15 @@
   <title>INZOINFO - Movie Hub</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+
+<body class="wallpaper">
+
+  <!-- Background Blur Layers -->
+  <div class="bgLayer"></div>
+  <div class="bgNoise"></div>
 
   <!-- Top Bar -->
-  <header class="topbar">
+  <header class="topbar glass">
     <div class="logoSvg">
       <svg width="120" height="32" viewBox="0 0 170 44" xmlns="http://www.w3.org/2000/svg" aria-label="INZOINFO">
         <defs>
@@ -42,7 +47,7 @@
     <!-- Trending/Latest -->
     <section class="sectionHead">
       <h3>Trending</h3>
-      <span class="chip">Latest</span>
+      <span class="chip chipGold">Latest</span>
     </section>
 
     <div id="trendingRow" class="trendingRow"></div>
@@ -64,7 +69,7 @@
 
   <!-- Movie Popup Modal -->
   <div id="modalOverlay" class="overlay hidden">
-    <div class="modal modalBig">
+    <div class="modal modalBig glassModal">
       <button id="closeModal" class="closeBtn">✕</button>
 
       <div id="modalPosterBg" class="modalPosterBg"></div>
@@ -103,7 +108,7 @@
 
   <!-- Download Quality Popup -->
   <div id="dlOverlay" class="overlay hidden">
-    <div class="modal">
+    <div class="modal glassModal">
       <button id="closeDl" class="closeBtn">✕</button>
 
       <div class="modalHeader">
@@ -126,7 +131,7 @@
 
   <!-- 18+ Confirm -->
   <div id="adultOverlay" class="overlay hidden">
-    <div class="modal">
+    <div class="modal glassModal">
       <button id="closeAdult" class="closeBtn">✕</button>
 
       <div class="modalHeader">
@@ -145,12 +150,12 @@
   <button id="openRequest" class="reqFab">＋ Request</button>
 
   <div id="requestOverlay" class="overlay hidden">
-    <div class="modal">
+    <div class="modal glassModal">
       <button id="closeRequest" class="closeBtn">✕</button>
 
       <div class="modalHeader">
         <h2>Request a Movie</h2>
-        <p class="muted">Request direct Telegram pe aayegi.</p>
+        <p class="muted">Request Supabase me save hogi ✅</p>
       </div>
 
       <div class="form">
@@ -176,7 +181,7 @@
   </div>
 
   <!-- Bottom Tabs -->
-  <nav class="bottomTabs">
+  <nav class="bottomTabs glassTabs">
     <button class="tab active" data-tab="BOLLYWOOD">BOLLYWOOD</button>
     <button class="tab" data-tab="HOLLYWOOD">HOLLYWOOD</button>
     <button class="tab" data-tab="ADULT">18+</button>
