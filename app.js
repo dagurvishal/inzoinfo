@@ -17,8 +17,8 @@ async function sbFetch(path, options = {}) {
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      ...(options.headers || {}),
-    },
+      ...(options.headers || {})
+    }
   });
 
   const text = await res.text();
@@ -45,9 +45,9 @@ async function supabaseInsertMovie(movie) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Prefer: "return=representation",
+      Prefer: "return=representation"
     },
-    body: JSON.stringify(movie),
+    body: JSON.stringify(movie)
   });
 }
 
@@ -56,9 +56,9 @@ async function supabaseInsertRequest(req) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Prefer: "return=representation",
+      Prefer: "return=representation"
     },
-    body: JSON.stringify(req),
+    body: JSON.stringify(req)
   });
 }
 
@@ -73,7 +73,7 @@ async function uploadToBucket(bucketName, file) {
   await sbFetch(`/storage/v1/object/${bucketName}/${filePath}`, {
     method: "POST",
     headers: { "Content-Type": file.type || "application/octet-stream" },
-    body: file,
+    body: file
   });
 
   return `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${filePath}`;
@@ -120,10 +120,9 @@ function toYouTubeEmbed(url) {
     return "";
   }
 
-  // autoplay with SOUND
-  return id
-    ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=0&playsinline=1`
-    : "";
+  // autoplay with sound
+  // note: browser policy may block autoplay with sound unless user interacted
+  return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : "";
 }
 
 /***********************
@@ -294,8 +293,6 @@ function openMovie(movie) {
 
   modalTitle.textContent = movie.name;
   modalCategory.textContent = categoryLabel(movie.category);
-
-  // autoplay sound
   modalTrailer.src = toYouTubeEmbed(movie.trailer_url);
 
   if (modalPosterBg) {
@@ -456,7 +453,7 @@ async function initAdminPage() {
         download_480,
         download_720,
         download_1080,
-        download_4k,
+        download_4k
       });
 
       adminStatus.textContent = "Movie saved ✅";
@@ -478,19 +475,6 @@ async function initAdminPage() {
 }
 
 /***********************
-  Request Form Reset
-************************/
-function resetRequestForm() {
-  const n = document.getElementById("reqMovieName");
-  const u = document.getElementById("reqMovieUrl");
-  const f = document.getElementById("reqPhotoFile");
-
-  if (n) n.value = "";
-  if (u) u.value = "";
-  if (f) f.value = "";
-}
-
-/***********************
   Init
 ************************/
 document.addEventListener("DOMContentLoaded", async () => {
@@ -498,16 +482,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (grid) {
     await loadMoviesFromSupabase();
 
-    if (searchInput) {
-      searchInput.addEventListener("input", () => {
-        renderSuggestions(searchInput.value);
-        renderMovies();
-      });
-    }
+    searchInput.addEventListener("input", () => {
+      renderSuggestions(searchInput.value);
+      renderMovies();
+    });
 
     document.addEventListener("click", (e) => {
       if (!e.target.closest(".searchWrap")) {
-        if (suggestions) suggestions.classList.add("hidden");
+        suggestions.classList.add("hidden");
       }
     });
 
@@ -515,6 +497,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       t.addEventListener("click", () => {
         const tab = t.dataset.tab;
 
+        // 18+ confirm
         if (tab === "ADULT") {
           adultOverlay.classList.remove("hidden");
           return;
@@ -528,110 +511,97 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // Adult confirm handlers
-    if (closeAdult)
-      closeAdult.addEventListener("click", () =>
-        adultOverlay.classList.add("hidden")
-      );
-    if (adultCancel)
-      adultCancel.addEventListener("click", () =>
-        adultOverlay.classList.add("hidden")
-      );
-    if (adultContinue)
-      adultContinue.addEventListener("click", () => {
-        adultOverlay.classList.add("hidden");
-        tabs.forEach((x) => x.classList.remove("active"));
-        const adultTabBtn = document.querySelector(`.tab[data-tab="ADULT"]`);
-        if (adultTabBtn) adultTabBtn.classList.add("active");
-        activeTab = "ADULT";
-        renderMovies();
-      });
+    closeAdult.addEventListener("click", () =>
+      adultOverlay.classList.add("hidden")
+    );
+    adultCancel.addEventListener("click", () =>
+      adultOverlay.classList.add("hidden")
+    );
+    adultContinue.addEventListener("click", () => {
+      adultOverlay.classList.add("hidden");
+      tabs.forEach((x) => x.classList.remove("active"));
+      document.querySelector(`.tab[data-tab="ADULT"]`).classList.add("active");
+      activeTab = "ADULT";
+      renderMovies();
+    });
 
     // Movie modal close (FIXED)
-    if (closeModal) closeModal.addEventListener("click", closeMovieModal);
-    if (modalOverlay)
-      modalOverlay.addEventListener("click", (e) => {
-        if (e.target === modalOverlay) closeMovieModal();
-      });
+    closeModal.addEventListener("click", closeMovieModal);
+    modalOverlay.addEventListener("click", (e) => {
+      if (e.target === modalOverlay) closeMovieModal();
+    });
 
     // Download popup
-    if (downloadOpenBtn)
-      downloadOpenBtn.addEventListener("click", () => openDownloadPopup());
-    if (closeDl)
-      closeDl.addEventListener("click", () => dlOverlay.classList.add("hidden"));
-    if (dlOverlay)
-      dlOverlay.addEventListener("click", (e) => {
-        if (e.target === dlOverlay) dlOverlay.classList.add("hidden");
-      });
+    downloadOpenBtn.addEventListener("click", () => openDownloadPopup());
+    closeDl.addEventListener("click", () => dlOverlay.classList.add("hidden"));
+    dlOverlay.addEventListener("click", (e) => {
+      if (e.target === dlOverlay) dlOverlay.classList.add("hidden");
+    });
 
     // Share
-    if (shareBtn)
-      shareBtn.addEventListener("click", () => {
-        if (selectedMovie) shareMovie(selectedMovie);
-      });
+    shareBtn.addEventListener("click", () => {
+      if (selectedMovie) shareMovie(selectedMovie);
+    });
 
     // Request popup open/close (FIXED)
-    if (openRequest)
-      openRequest.addEventListener("click", () => {
-        requestOverlay.classList.remove("hidden");
-      });
+    openRequest.addEventListener("click", () => {
+      requestOverlay.classList.remove("hidden");
+    });
 
-    if (closeRequest)
-      closeRequest.addEventListener("click", () => {
-        requestOverlay.classList.add("hidden");
-        resetRequestForm();
-      });
+    function closeRequestModal() {
+      requestOverlay.classList.add("hidden");
+    }
 
-    if (cancelRequestBtn)
-      cancelRequestBtn.addEventListener("click", () => {
-        requestOverlay.classList.add("hidden");
-        resetRequestForm();
-      });
+    closeRequest.addEventListener("click", closeRequestModal);
+    cancelRequestBtn.addEventListener("click", closeRequestModal);
+    requestOverlay.addEventListener("click", (e) => {
+      if (e.target === requestOverlay) closeRequestModal();
+    });
 
-    if (requestOverlay)
-      requestOverlay.addEventListener("click", (e) => {
-        if (e.target === requestOverlay) {
-          requestOverlay.classList.add("hidden");
-          resetRequestForm();
-        }
-      });
+    // Send Request (NO TELEGRAM HERE)
+    sendRequestBtn.addEventListener("click", async () => {
+      const nameEl = document.getElementById("reqMovieName");
+      const urlEl = document.getElementById("reqMovieUrl");
+      const fileEl = document.getElementById("reqPhotoFile");
 
-    // Request submit (Telegram removed, only Supabase insert)
-    if (sendRequestBtn)
-      sendRequestBtn.addEventListener("click", async () => {
-        const movieName = document.getElementById("reqMovieName").value.trim();
-        const movieUrl = document.getElementById("reqMovieUrl").value.trim();
-        const reqFile = document.getElementById("reqPhotoFile").files[0];
+      const movieName = nameEl.value.trim();
+      const movieUrl = urlEl.value.trim();
+      const reqFile = fileEl.files[0];
 
-        if (!movieName) {
-          alert("Movie name required!");
-          return;
-        }
+      if (!movieName) {
+        alert("Movie name required!");
+        return;
+      }
 
-        try {
-          sendRequestBtn.disabled = true;
-          sendRequestBtn.textContent = "Sending...";
+      try {
+        sendRequestBtn.disabled = true;
+        sendRequestBtn.textContent = "Sending...";
 
-          let photoUrl = null;
-          if (reqFile) photoUrl = await uploadToBucket(REQUESTS_BUCKET, reqFile);
+        let photoUrl = null;
+        if (reqFile) photoUrl = await uploadToBucket(REQUESTS_BUCKET, reqFile);
 
-          await supabaseInsertRequest({
-            movie_name: movieName,
-            photo_url: photoUrl,
-            movie_url: movieUrl || null,
-            user_query: (searchInput?.value || "").trim(),
-          });
+        await supabaseInsertRequest({
+          movie_name: movieName,
+          photo_url: photoUrl,
+          movie_url: movieUrl || null,
+          user_query: (searchInput?.value || "").trim()
+        });
 
-          alert("Request sent ✅");
-          requestOverlay.classList.add("hidden");
-          resetRequestForm();
-        } catch (e) {
-          console.log(e);
-          alert("Failed to send request ❌");
-        } finally {
-          sendRequestBtn.disabled = false;
-          sendRequestBtn.textContent = "Send Request";
-        }
-      });
+        alert("Request sent ✅ (Telegram auto via trigger)");
+        closeRequestModal();
+
+        // clear inputs (FIXED)
+        nameEl.value = "";
+        urlEl.value = "";
+        fileEl.value = "";
+      } catch (e) {
+        console.log(e);
+        alert("Failed to send request ❌");
+      } finally {
+        sendRequestBtn.disabled = false;
+        sendRequestBtn.textContent = "Send Request";
+      }
+    });
   }
 
   // admin
