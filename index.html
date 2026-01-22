@@ -8,14 +8,8 @@
 </head>
 <body>
 
-  <!-- Top Bar -->
+  <!-- Top Bar (Logo Left, Search Right) -->
   <header class="topbar">
-    <div class="searchBox">
-      <span class="icon">🔎</span>
-      <input id="searchInput" type="text" placeholder="Search movies..." />
-    </div>
-
-    <!-- SVG Logo (Topbar small) -->
     <div class="logoSvg">
       <svg width="120" height="32" viewBox="0 0 170 44" xmlns="http://www.w3.org/2000/svg" aria-label="INZOINFO">
         <defs>
@@ -32,6 +26,11 @@
         <text x="16" y="30" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1.2" fill="#FFFFFF">INZO</text>
         <text x="86" y="30" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1.2" fill="url(#goldGrad2)">INFO</text>
       </svg>
+    </div>
+
+    <div class="searchBox">
+      <span class="icon">🔎</span>
+      <input id="searchInput" type="text" placeholder="Search movies..." />
     </div>
   </header>
 
@@ -91,8 +90,8 @@
         </label>
 
         <label>
-          Photo URL (optional)
-          <input id="reqPhotoUrl" type="url" placeholder="https://image-link.jpg" />
+          Photo Upload (optional)
+          <input id="reqPhotoFile" type="file" accept="image/*" />
         </label>
 
         <label>
