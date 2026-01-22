@@ -8,7 +8,7 @@
 </head>
 <body>
 
-  <!-- Top Bar (Logo Left, Search Right) -->
+  <!-- Top Bar -->
   <header class="topbar">
     <div class="logoSvg">
       <svg width="120" height="32" viewBox="0 0 170 44" xmlns="http://www.w3.org/2000/svg" aria-label="INZOINFO">
@@ -28,15 +28,35 @@
       </svg>
     </div>
 
-    <div class="searchBox">
-      <span class="icon">🔎</span>
-      <input id="searchInput" type="text" placeholder="Search movies..." />
+    <div class="searchWrap">
+      <div class="searchBox">
+        <span class="icon">🔎</span>
+        <input id="searchInput" type="text" placeholder="Search movies..." autocomplete="off" />
+      </div>
+      <div id="suggestions" class="suggestions hidden"></div>
     </div>
   </header>
 
-  <!-- Movies Grid -->
   <main class="container">
+
+    <!-- Trending/Latest -->
+    <section class="sectionHead">
+      <h3>Trending</h3>
+      <span class="chip">Latest</span>
+    </section>
+
+    <div id="trendingRow" class="trendingRow"></div>
+
+    <!-- Main Grid -->
+    <section class="sectionHead" style="margin-top:14px;">
+      <h3>Browse</h3>
+      <span id="activeCatChip" class="chip">BOLLYWOOD</span>
+    </section>
+
+    <div id="skeletonGrid" class="grid"></div>
+
     <div id="moviesGrid" class="grid"></div>
+
     <div id="emptyState" class="emptyState hidden">
       No movies found. Try another search.
     </div>
@@ -44,8 +64,10 @@
 
   <!-- Movie Popup Modal -->
   <div id="modalOverlay" class="overlay hidden">
-    <div class="modal">
+    <div class="modal modalBig">
       <button id="closeModal" class="closeBtn">✕</button>
+
+      <div id="modalPosterBg" class="modalPosterBg"></div>
 
       <div class="modalHeader">
         <h2 id="modalTitle">Movie Name</h2>
@@ -65,8 +87,56 @@
       </div>
 
       <div class="modalActions">
-        <a id="watchTrailerBtn" class="btn btnDark" href="#" target="_blank">▶ Watch Trailer</a>
-        <a id="downloadBtn" class="btn btnGold" href="#" target="_blank">⬇ Download Now</a>
+        <button id="shareBtn" class="btn btnDark">⤴ Share</button>
+        <button id="downloadOpenBtn" class="btn btnGold">⬇ Download</button>
+      </div>
+
+      <div class="relatedWrap">
+        <div class="relatedHead">
+          <h4>Related</h4>
+          <span class="muted">Same category</span>
+        </div>
+        <div id="relatedRow" class="relatedRow"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Download Quality Popup -->
+  <div id="dlOverlay" class="overlay hidden">
+    <div class="modal">
+      <button id="closeDl" class="closeBtn">✕</button>
+
+      <div class="modalHeader">
+        <h2>Choose Quality</h2>
+        <p class="muted">Select quality to download.</p>
+      </div>
+
+      <div class="qualityGrid">
+        <button id="q480" class="qBtn">480p</button>
+        <button id="q720" class="qBtn">720p</button>
+        <button id="q1080" class="qBtn">1080p</button>
+        <button id="q4k" class="qBtn">4K</button>
+      </div>
+
+      <p class="muted" style="margin-top:10px;font-size:12px;">
+        Grey button means link not available.
+      </p>
+    </div>
+  </div>
+
+  <!-- 18+ Confirm -->
+  <div id="adultOverlay" class="overlay hidden">
+    <div class="modal">
+      <button id="closeAdult" class="closeBtn">✕</button>
+
+      <div class="modalHeader">
+        <h2>18+ Content</h2>
+        <p class="muted">Are you sure you want to continue?</p>
+      </div>
+
+      <div class="modalActions">
+        <button id="adultCancel" class="btn btnDark">Cancel</button>
+        <button id="adultContinue" class="btn btnGold">Yes, Continue</button>
       </div>
     </div>
   </div>
