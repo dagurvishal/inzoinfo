@@ -18,7 +18,7 @@
   <main class="container">
     <div class="card">
       <h2>Add Movie</h2>
-      <p class="muted">No password. Supabase DB me save hoga.</p>
+      <p class="muted">Poster upload + Supabase DB save.</p>
 
       <form id="movieForm" class="form">
         <label>
@@ -36,8 +36,8 @@
         </label>
 
         <label>
-          Poster URL
-          <input id="moviePoster" type="url" placeholder="https://...jpg" required />
+          Poster Upload *
+          <input id="moviePosterFile" type="file" accept="image/*" required />
         </label>
 
         <label>
@@ -50,8 +50,10 @@
           <input id="movieDownload" type="url" placeholder="https://..." required />
         </label>
 
-        <button class="btn btnGold" type="submit">Save Movie</button>
+        <button id="saveMovieBtn" class="btn btnGold" type="submit">Save Movie</button>
       </form>
+
+      <div id="adminStatus" class="muted" style="margin-top:10px;"></div>
     </div>
 
     <div class="card">
