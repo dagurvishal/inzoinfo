@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - INZOINFO</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="logo">
+      <span class="logoWhite">ADMIN</span><span class="logoGold">PANEL</span>
+    </div>
+    <a class="miniLink" href="index.html">← Back</a>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h2>Add Movie</h2>
+      <p class="muted">No password. Supabase DB me save hoga.</p>
+
+      <form id="movieForm" class="form">
+        <label>
+          Movie Name
+          <input id="movieName" type="text" placeholder="Fast X" required />
+        </label>
+
+        <label>
+          Category
+          <select id="movieCategory" required>
+            <option value="BOLLYWOOD">BOLLYWOOD</option>
+            <option value="HOLLYWOOD">HOLLYWOOD</option>
+            <option value="ADULT">18+</option>
+          </select>
+        </label>
+
+        <label>
+          Poster URL
+          <input id="moviePoster" type="url" placeholder="https://...jpg" required />
+        </label>
+
+        <label>
+          Trailer URL (YouTube)
+          <input id="movieTrailer" type="url" placeholder="https://www.youtube.com/watch?v=XXXX" required />
+        </label>
+
+        <label>
+          Download URL
+          <input id="movieDownload" type="url" placeholder="https://..." required />
+        </label>
+
+        <button class="btn btnGold" type="submit">Save Movie</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Movies List</h2>
+      <div id="adminList" class="adminList"></div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
