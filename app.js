@@ -2,7 +2,7 @@
   CONFIG (EDIT THIS)
 ************************/
 const SUPABASE_URL = "https://ehnkxlccztcjqznuwtto.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_ANON_KEY_HERE"; // keep it here (public)
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc"; // keep it here (public)
 
 const POSTERS_BUCKET = "posters";
 const REQUESTS_BUCKET = "requests";
