@@ -18,7 +18,7 @@
   <main class="container">
     <div class="card">
       <h2>Add Movie</h2>
-      <p class="muted">Poster upload + Supabase DB save.</p>
+      <p class="muted">Poster upload + 4 quality links.</p>
 
       <form id="movieForm" class="form">
         <label>
@@ -46,8 +46,23 @@
         </label>
 
         <label>
-          Download URL
-          <input id="movieDownload" type="url" placeholder="https://..." required />
+          Download 480p URL (optional)
+          <input id="dl480" type="url" placeholder="https://..." />
+        </label>
+
+        <label>
+          Download 720p URL (optional)
+          <input id="dl720" type="url" placeholder="https://..." />
+        </label>
+
+        <label>
+          Download 1080p URL (optional)
+          <input id="dl1080" type="url" placeholder="https://..." />
+        </label>
+
+        <label>
+          Download 4K URL (optional)
+          <input id="dl4k" type="url" placeholder="https://..." />
         </label>
 
         <button id="saveMovieBtn" class="btn btnGold" type="submit">Save Movie</button>
