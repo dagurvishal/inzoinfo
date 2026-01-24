@@ -3,190 +3,119 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>INZOINFO - Movie Hub</title>
+  <title>INZO INFO</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- Wallpaper Background -->
-  <div class="wallpaper"></div>
-  <div class="wallpaperBlur"></div>
+  <!-- Background overlay -->
+  <div class="bgOverlay"></div>
 
-  <!-- Top Bar -->
-  <header class="topbar">
+  <!-- Top Header -->
+  <header class="topHeader">
     <div class="logoBox">
-      <div class="logoSvg">
-        <svg width="120" height="32" viewBox="0 0 170 44" xmlns="http://www.w3.org/2000/svg" aria-label="INZOINFO">
-          <defs>
-            <linearGradient id="bgGrad2" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#0B0F14"/>
-              <stop offset="100%" stop-color="#111827"/>
-            </linearGradient>
-            <linearGradient id="goldGrad2" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stop-color="#FFD54A"/>
-              <stop offset="100%" stop-color="#F4B400"/>
-            </linearGradient>
-          </defs>
-          <rect x="1" y="1" width="168" height="42" rx="12" fill="url(#bgGrad2)" stroke="rgba(255,255,255,0.10)"/>
-          <text x="16" y="30" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1.2" fill="#FFFFFF">INZO</text>
-          <text x="86" y="30" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1.2" fill="url(#goldGrad2)">INFO</text>
-        </svg>
-      </div>
+      <span class="logoText">INZO</span>
+      <span class="logoText gold">INFO</span>
     </div>
 
-    <div class="searchWrap">
-      <div class="searchBox">
-        <span class="icon">🔎</span>
-        <input id="searchInput" type="text" placeholder="Search movies..." autocomplete="off" />
-      </div>
-      <div id="suggestions" class="suggestions hidden"></div>
+    <div class="searchBox">
+      <span class="searchIcon">🔍</span>
+      <input id="searchInput" type="text" placeholder="Search movies..." />
     </div>
   </header>
 
+  <!-- Main Movies List -->
   <main class="container">
-
-    <!-- Trending/Latest -->
-    <section class="sectionHead">
-      <h3>Trending</h3>
-      <span class="chip">Latest</span>
-    </section>
-
-    <div id="trendingRow" class="trendingRow"></div>
-
-    <!-- Main Grid -->
-    <section class="sectionHead" style="margin-top:14px;">
-      <h3>Browse</h3>
-      <span id="activeCatChip" class="chip">BOLLYWOOD</span>
-    </section>
-
-    <div id="skeletonGrid" class="grid"></div>
     <div id="moviesGrid" class="grid"></div>
-
     <div id="emptyState" class="emptyState hidden">
       No movies found. Try another search.
     </div>
   </main>
 
-  <!-- Movie Popup Modal -->
-  <div id="modalOverlay" class="overlay hidden">
-    <div class="modal modalBig">
-      <button id="closeModal" class="closeBtn" type="button">✕</button>
-
-      <div id="modalPosterBg" class="modalPosterBg"></div>
-
-      <div class="modalHeader">
-        <h2 id="modalTitle">Movie Name</h2>
-        <p id="modalCategory" class="muted">Category</p>
-      </div>
-
-      <div class="playerWrap">
-        <iframe
-          id="modalTrailer"
-          class="player"
-          src=""
-          title="Trailer"
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowfullscreen
-        ></iframe>
-      </div>
-
-      <div class="modalActions">
-        <button id="shareBtn" class="btn btnDark" type="button">⤴ Share</button>
-        <button id="downloadOpenBtn" class="btn btnGold" type="button">⬇ Download</button>
-      </div>
-
-      <div class="relatedWrap">
-        <div class="relatedHead">
-          <h4>Related</h4>
-          <span class="muted">Same category</span>
-        </div>
-        <div id="relatedRow" class="relatedRow"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Download Quality Popup -->
-  <div id="dlOverlay" class="overlay hidden">
-    <div class="modal">
-      <button id="closeDl" class="closeBtn" type="button">✕</button>
-
-      <div class="modalHeader">
-        <h2>Choose Quality</h2>
-        <p class="muted">Select quality to download.</p>
-      </div>
-
-      <div class="qualityGrid">
-        <button id="q480" class="qBtn" type="button">480p</button>
-        <button id="q720" class="qBtn" type="button">720p</button>
-        <button id="q1080" class="qBtn" type="button">1080p</button>
-        <button id="q4k" class="qBtn" type="button">4K</button>
-      </div>
-
-      <p class="muted" style="margin-top:10px;font-size:12px;">
-        Grey button means link not available.
-      </p>
-    </div>
-  </div>
-
-  <!-- 18+ Confirm -->
-  <div id="adultOverlay" class="overlay hidden">
-    <div class="modal">
-      <button id="closeAdult" class="closeBtn" type="button">✕</button>
-
-      <div class="modalHeader">
-        <h2>18+ Content</h2>
-        <p class="muted">Are you sure you want to continue?</p>
-      </div>
-
-      <div class="modalActions">
-        <button id="adultCancel" class="btn btnDark" type="button">Cancel</button>
-        <button id="adultContinue" class="btn btnGold" type="button">Yes, Continue</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Request Button + Popup -->
-  <button id="openRequest" class="reqFab" type="button">＋ Request</button>
-
-  <div id="requestOverlay" class="overlay hidden">
-    <div class="modal">
-      <button id="closeRequest" class="closeBtn" type="button">✕</button>
-
-      <div class="modalHeader">
-        <h2>Request a Movie</h2>
-        <p class="muted">Request Supabase me save hogi ✅</p>
-      </div>
-
-      <div class="form">
-        <label>
-          Movie Name *
-          <input id="reqMovieName" type="text" placeholder="Pathaan" />
-        </label>
-
-        <label>
-          Photo Upload (optional)
-          <input id="reqPhotoFile" type="file" accept="image/*" />
-        </label>
-
-        <label>
-          Movie URL (optional)
-          <input id="reqMovieUrl" type="url" placeholder="https://..." />
-        </label>
-
-        <button id="sendRequestBtn" class="btn btnGold" type="button">Send Request</button>
-        <button id="cancelRequestBtn" class="btn btnDark" type="button">Cancel</button>
-      </div>
-    </div>
-  </div>
+  <!-- Floating Request Button -->
+  <button id="openRequestBtn" class="reqFab">+ Request</button>
 
   <!-- Bottom Tabs -->
   <nav class="bottomTabs">
-    <button class="tab active" data-tab="BOLLYWOOD" type="button">MOVIE</button>
-    <button class="tab" data-tab="HOLLYWOOD" type="button">LATEST</button>
-    <button class="tab" data-tab="ADULT" type="button">ADULT</button>
+    <button class="tab active" data-tab="BOLLYWOOD">BOLLYWOOD</button>
+    <button class="tab" data-tab="HOLLYWOOD">HOLLYWOOD</button>
+    <button class="tab" data-tab="ADULT">18+</button>
   </nav>
 
+  <!-- Movie Modal -->
+  <div id="movieModal" class="modal hidden">
+    <div class="modalCard bigModal">
+      <button class="closeBtn" id="closeMovieModal">✕</button>
+
+      <div class="modalPosterWrap">
+        <img id="modalPoster" src="" alt="Poster" />
+        <div class="modalPosterFade"></div>
+        <h2 id="modalTitle" class="modalTitle"></h2>
+      </div>
+
+      <div class="modalBody">
+        <p id="modalDesc" class="modalDesc"></p>
+
+        <div class="modalActions">
+          <button id="modalRequestBtn" class="btnPrimary">Request This</button>
+          <button id="modalCloseBtn" class="btnGhost">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Request Modal -->
+  <div id="requestModal" class="modal hidden">
+    <div class="modalCard">
+      <button class="closeBtn" id="closeRequestModal">✕</button>
+
+      <h2 class="modalHeading">Request a Movie</h2>
+      <p class="modalSub">Request Supabase me save hogi ✅</p>
+
+      <form id="requestForm" class="form">
+        <label>Movie Name *</label>
+        <input id="reqMovieName" type="text" required placeholder="Enter movie name..." />
+
+        <label>Quality</label>
+        <select id="reqQuality">
+          <option value="720p">720p</option>
+          <option value="1080p" selected>1080p</option>
+          <option value="4K">4K</option>
+        </select>
+
+        <label>Language</label>
+        <select id="reqLanguage">
+          <option value="Hindi" selected>Hindi</option>
+          <option value="English">English</option>
+          <option value="Dual Audio">Dual Audio</option>
+        </select>
+
+        <label>Notes (optional)</label>
+        <textarea id="reqNotes" placeholder="Any extra details..."></textarea>
+
+        <button id="submitRequestBtn" type="submit" class="btnPrimary">Send Request</button>
+        <button id="cancelRequestBtn" type="button" class="btnGhost">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Age Confirm Modal -->
+  <div id="ageModal" class="modal hidden">
+    <div class="modalCard ageCard">
+      <h2 class="modalHeading">18+ Content</h2>
+      <p class="modalSub">Are you sure you are 18+ ?</p>
+
+      <div class="ageActions">
+        <button id="ageYes" class="btnPrimary">Yes, Continue</button>
+        <button id="ageNo" class="btnGhost">No, Go Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>
