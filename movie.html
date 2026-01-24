@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Movie</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .movie-wrap{padding:14px;}
+    .hero{
+      border-radius:26px;
+      border:1px solid rgba(255,255,255,.08);
+      overflow:hidden;
+      background:rgba(255,255,255,.04);
+      position:relative;
+    }
+    .hero img{width:100%;height:360px;object-fit:cover;display:block;}
+    .hero .overlay2{
+      position:absolute;left:0;right:0;bottom:0;
+      padding:18px;
+      background:linear-gradient(to top, rgba(0,0,0,.82), rgba(0,0,0,.05));
+    }
+    .hero h1{margin:0;font-size:22px;font-weight:1000;}
+    .meta{margin-top:6px;color:rgba(233,238,247,.65);font-weight:800;font-size:13px;}
+    .desc{
+      margin-top:12px;
+      padding:14px;
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      color:rgba(233,238,247,.8);
+      line-height:1.45;
+      font-weight:650;
+    }
+    .btn-row{display:flex;gap:10px;margin-top:12px;}
+    .btn-row .btn{margin-top:0;}
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <button class="icon-btn" onclick="history.back()">←</button>
+    <div class="brand">INZO <span>WORLD</span></div>
+    <div style="width:44px;"></div>
+  </header>
+
+  <main class="movie-wrap">
+    <div class="hero">
+      <img id="poster" src="" alt="poster"/>
+      <div class="overlay2">
+        <h1 id="title">Loading...</h1>
+        <div class="meta" id="meta">—</div>
+      </div>
+    </div>
+
+    <div class="desc" id="desc">Loading description...</div>
+
+    <div class="btn-row">
+      <button class="btn btn-dark" onclick="goTrailer()">Trailer</button>
+      <button class="btn btn-gold" onclick="goDownload()">Download</button>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://ehnkxlccztcjqznuwtto.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc";
+
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+
+    let movieData = null;
+
+    async function fetchMovie(){
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/movies?select=*&id=eq.${id}`,{
+        headers:{
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        }
+      });
+      const data = await res.json();
+      movieData = data?.[0];
+
+      document.getElementById("title").innerText = movieData?.title || "Unknown";
+      document.getElementById("poster").src = movieData?.backdrop_url || movieData?.poster_url || "https://via.placeholder.com/900x600?text=Movie";
+      document.getElementById("desc").innerText = movieData?.description || "No description available.";
+      document.getElementById("meta").innerText = `${movieData?.year || "—"} • ⭐ ${movieData?.rating || "—"}`;
+    }
+
+    function goDownload(){
+      location.href = `download.html?id=${encodeURIComponent(id)}`;
+    }
+
+    function goTrailer(){
+      if(!movieData?.trailer_url){
+        alert("Trailer not available");
+        return;
+      }
+      location.href = `trailer.html?url=${encodeURIComponent(movieData.trailer_url)}`;
+    }
+
+    fetchMovie();
+  </script>
+</body>
+</html>
