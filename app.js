@@ -1,50 +1,150 @@
 /***********************
-  SUPABASE CONFIG
+  CONFIG (EDIT THIS)
 ************************/
 const SUPABASE_URL = "https://ehnkxlccztcjqznuwtto.supabase.co";
 const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc"; // public ok
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const POSTERS_BUCKET = "posters";
+const REQUESTS_BUCKET = "requests";
+
+// 🔥 Cloudflare Worker URL (Request direct telegram)
+const WORKER_URL = "https://inzoworld-request.dagurvishal2049.workers.dev";
 
 /***********************
-  UI ELEMENTS
+  Supabase REST helper
 ************************/
-const moviesList = document.getElementById("moviesList");
-const emptyState = document.getElementById("emptyState");
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}${path}`, {
+    ...options,
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      ...(options.headers || {})
+    }
+  });
 
+  const text = await res.text();
+  let data = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
+
+  if (!res.ok) {
+    console.log("Supabase error:", res.status, data);
+    throw new Error(typeof data === "string" ? data : JSON.stringify(data));
+  }
+
+  return data;
+}
+
+async function supabaseSelectMovies() {
+  return await sbFetch(`/rest/v1/movies?select=*&order=created_at.desc`);
+}
+
+async function supabaseInsertMovie(movie) {
+  return await sbFetch(`/rest/v1/movies`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify(movie)
+  });
+}
+
+/***********************
+  Storage Upload
+************************/
+async function uploadToBucket(bucketName, file) {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const safeName = `${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;
+  const filePath = safeName;
+
+  await sbFetch(`/storage/v1/object/${bucketName}/${filePath}`, {
+    method: "POST",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file
+  });
+
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${filePath}`;
+}
+
+/***********************
+  Helpers
+************************/
+function normalizeText(s) {
+  return (s || "").toLowerCase().replace(/\s+/g, "").trim();
+}
+
+function fuzzyMatch(name, query) {
+  const a = normalizeText(name);
+  const b = normalizeText(query);
+  if (!b) return true;
+  if (a.includes(b)) return true;
+
+  let i = 0,
+    j = 0,
+    match = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) {
+      match++;
+      j++;
+    }
+    i++;
+  }
+  return match >= Math.max(3, Math.floor(b.length * 0.6));
+}
+
+function categoryLabel(cat) {
+  return cat === "ADULT" ? "18+" : cat;
+}
+
+function toYouTubeEmbed(url) {
+  if (!url) return "";
+  let id = "";
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) id = u.pathname.replace("/", "");
+    else id = u.searchParams.get("v") || "";
+  } catch {
+    return "";
+  }
+  return id ? `https://www.youtube.com/embed/${id}` : "";
+}
+
+/***********************
+  DOM refs (index)
+************************/
+const grid = document.getElementById("moviesGrid");
+const skeletonGrid = document.getElementById("skeletonGrid");
+const trendingRow = document.getElementById("trendingRow");
+const emptyState = document.getElementById("emptyState");
 const searchInput = document.getElementById("searchInput");
 const suggestions = document.getElementById("suggestions");
+const activeCatChip = document.getElementById("activeCatChip");
 
 const modalOverlay = document.getElementById("modalOverlay");
 const closeModal = document.getElementById("closeModal");
 const modalTitle = document.getElementById("modalTitle");
 const modalCategory = document.getElementById("modalCategory");
-const modalPosterBg = document.getElementById("modalPosterBg");
-const modalPoster = document.getElementById("modalPoster");
-const posterFadeTitle = document.getElementById("posterFadeTitle");
-
-const trailerBtn = document.getElementById("trailerBtn");
-const downloadBtn = document.getElementById("downloadBtn");
-const shareBtn = document.getElementById("shareBtn");
-
-const trailerOverlay = document.getElementById("trailerOverlay");
-const closeTrailer = document.getElementById("closeTrailer");
 const modalTrailer = document.getElementById("modalTrailer");
+const modalPosterBg = document.getElementById("modalPosterBg");
+const shareBtn = document.getElementById("shareBtn");
+const downloadOpenBtn = document.getElementById("downloadOpenBtn");
+const relatedRow = document.getElementById("relatedRow");
 
 const dlOverlay = document.getElementById("dlOverlay");
 const closeDl = document.getElementById("closeDl");
-const dlBackBtn = document.getElementById("dlBackBtn");
-const dlShareBtn = document.getElementById("dlShareBtn");
-
 const q480 = document.getElementById("q480");
 const q720 = document.getElementById("q720");
 const q1080 = document.getElementById("q1080");
-const q2160 = document.getElementById("q2160");
-const qExtra1 = document.getElementById("qExtra1");
-const watchOnline = document.getElementById("watchOnline");
+const q4k = document.getElementById("q4k");
 
 const adultOverlay = document.getElementById("adultOverlay");
+const closeAdult = document.getElementById("closeAdult");
 const adultCancel = document.getElementById("adultCancel");
 const adultContinue = document.getElementById("adultContinue");
 
@@ -53,471 +153,488 @@ const openRequest = document.getElementById("openRequest");
 const closeRequest = document.getElementById("closeRequest");
 const cancelRequestBtn = document.getElementById("cancelRequestBtn");
 const sendRequestBtn = document.getElementById("sendRequestBtn");
-const reqMovieName = document.getElementById("reqMovieName");
-const reqNote = document.getElementById("reqNote");
-const reqPhotoFile = document.getElementById("reqPhotoFile");
-const reqStatus = document.getElementById("reqStatus");
 
-const menuBtn = document.getElementById("menuBtn");
-const sideMenu = document.getElementById("sideMenu");
-const sideOverlay = document.getElementById("sideOverlay");
-const closeMenuBtn = document.getElementById("closeMenuBtn");
+const tabs = document.querySelectorAll(".tab");
 
 /***********************
-  STATE
+  State
 ************************/
-let ACTIVE_TAB = "BOLLYWOOD";
-let ALL_MOVIES = [];
-let FILTERED_MOVIES = [];
-
-let selectedMovie = null; // currently opened movie object
+let allMovies = [];
+let activeTab = "BOLLYWOOD";
+let selectedMovie = null;
 
 /***********************
-  HELPERS
+  UI helpers
 ************************/
-function show(el) { el?.classList.remove("hidden"); }
-function hide(el) { el?.classList.add("hidden"); }
-
-function toast(msg) {
-  alert(msg); // simple + safe for mobile
-}
-
-function escapeHtml(str="") {
-  return str.replace(/[&<>"']/g, m => ({
-    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
-  }[m]));
-}
-
-function setButtonDisabled(btn, disabled=true) {
-  if (!btn) return;
-  btn.classList.toggle("disabled", disabled);
-  btn.disabled = disabled;
-}
-
-/***********************
-  MENU
-************************/
-menuBtn?.addEventListener("click", () => {
-  show(sideOverlay);
-  show(sideMenu);
-});
-closeMenuBtn?.addEventListener("click", () => {
-  hide(sideOverlay);
-  hide(sideMenu);
-});
-sideOverlay?.addEventListener("click", () => {
-  hide(sideOverlay);
-  hide(sideMenu);
-});
-
-/***********************
-  TABS
-************************/
-function setActiveTab(tabName) {
-  ACTIVE_TAB = tabName;
-
-  document.querySelectorAll(".tabBtn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.tab === tabName);
-  });
-
-  if (tabName === "ADULT") {
-    show(adultOverlay);
-    return;
-  }
-
-  applyFilters();
-}
-
-document.querySelectorAll(".tabBtn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const t = btn.dataset.tab;
-    if (t) setActiveTab(t);
-  });
-});
-
-/***********************
-  ADULT CONFIRM
-************************/
-adultCancel?.addEventListener("click", () => {
-  hide(adultOverlay);
-  setActiveTab("BOLLYWOOD");
-});
-
-adultContinue?.addEventListener("click", () => {
-  hide(adultOverlay);
-  applyFilters();
-});
-
-/***********************
-  FETCH MOVIES
-************************/
-async function loadMovies() {
-  try {
-    // Table name assumed: "movies"
-    // Columns assumed: title, category, poster_url, trailer_url, link_480, link_720, link_1080, link_2160, watch_url
-    const { data, error } = await sb
-      .from("movies")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    ALL_MOVIES = data || [];
-    applyFilters();
-  } catch (e) {
-    console.error(e);
-    toast("Movies load failed ❌");
+function showSkeleton() {
+  if (!skeletonGrid) return;
+  skeletonGrid.innerHTML = "";
+  for (let i = 0; i < 6; i++) {
+    const box = document.createElement("div");
+    box.className = "movieCard";
+    box.style.height = "230px";
+    box.style.opacity = "0.35";
+    skeletonGrid.appendChild(box);
   }
 }
 
-/***********************
-  FILTER + SEARCH
-************************/
-function applyFilters() {
-  const q = (searchInput?.value || "").trim().toLowerCase();
-
-  FILTERED_MOVIES = ALL_MOVIES.filter(m => {
-    const cat = (m.category || "").toUpperCase();
-    const title = (m.title || m.movie_name || "").toLowerCase();
-
-    const matchTab =
-      (ACTIVE_TAB === "BOLLYWOOD" && cat.includes("BOLLY")) ||
-      (ACTIVE_TAB === "HOLLYWOOD" && cat.includes("HOLLY")) ||
-      (ACTIVE_TAB === "ADULT" && (cat.includes("ADULT") || cat.includes("18")));
-
-    const matchSearch = !q || title.includes(q);
-
-    return matchTab && matchSearch;
-  });
-
-  renderMovies(FILTERED_MOVIES);
-  renderSuggestions(q);
+function hideSkeleton() {
+  if (!skeletonGrid) return;
+  skeletonGrid.innerHTML = "";
 }
 
-function renderSuggestions(q) {
+function renderTrending() {
+  if (!trendingRow) return;
+  trendingRow.innerHTML = "";
+
+  const list = allMovies.slice(0, 8);
+  list.forEach((m) => {
+    const c = document.createElement("div");
+    c.className = "trendCard";
+    c.innerHTML = `
+      <img src="${m.poster_url}" alt="${m.name}">
+      <div class="trendTitle">${m.name}</div>
+    `;
+    c.addEventListener("click", () => openMovie(m));
+    trendingRow.appendChild(c);
+  });
+}
+
+function renderSuggestions(query) {
   if (!suggestions) return;
 
-  if (!q || q.length < 2) {
-    hide(suggestions);
+  const q = query.trim();
+  if (!q) {
+    suggestions.classList.add("hidden");
     suggestions.innerHTML = "";
     return;
   }
 
-  const top = FILTERED_MOVIES.slice(0, 6);
-  if (!top.length) {
-    hide(suggestions);
+  const matches = allMovies.filter((m) => fuzzyMatch(m.name, q)).slice(0, 5);
+
+  if (matches.length === 0) {
+    suggestions.classList.add("hidden");
     suggestions.innerHTML = "";
     return;
   }
 
-  suggestions.innerHTML = top
-    .map(m => `<div class="sugItem" data-id="${m.id}">${escapeHtml(m.title || "Untitled")}</div>`)
-    .join("");
-
-  show(suggestions);
-
-  suggestions.querySelectorAll(".sugItem").forEach(item => {
+  suggestions.innerHTML = "";
+  matches.forEach((m) => {
+    const item = document.createElement("div");
+    item.className = "suggItem";
+    item.innerHTML = `
+      <div class="suggName">${m.name}</div>
+      <div class="suggCat">${categoryLabel(m.category)}</div>
+    `;
     item.addEventListener("click", () => {
-      const id = item.dataset.id;
-      const movie = FILTERED_MOVIES.find(x => String(x.id) === String(id));
-      if (movie) openMovieModal(movie);
-      hide(suggestions);
+      searchInput.value = m.name;
+      suggestions.classList.add("hidden");
+      renderMovies();
+      openMovie(m);
     });
+    suggestions.appendChild(item);
   });
+
+  suggestions.classList.remove("hidden");
 }
 
-searchInput?.addEventListener("input", applyFilters);
-document.addEventListener("click", (e) => {
-  if (!suggestions) return;
-  if (!suggestions.contains(e.target) && e.target !== searchInput) {
-    hide(suggestions);
-  }
-});
+function renderMovies() {
+  if (!grid) return;
 
-/***********************
-  RENDER MOVIES LIST
-************************/
-function renderMovies(list) {
-  if (!moviesList) return;
+  const q = searchInput ? searchInput.value.trim() : "";
+  const filtered = allMovies.filter((m) => {
+    return m.category === activeTab && fuzzyMatch(m.name, q);
+  });
 
-  moviesList.innerHTML = "";
+  grid.innerHTML = "";
 
-  if (!list || list.length === 0) {
-    show(emptyState);
+  if (activeCatChip) activeCatChip.textContent = activeTab;
+
+  if (filtered.length === 0) {
+    emptyState.classList.remove("hidden");
     return;
   }
-  hide(emptyState);
+  emptyState.classList.add("hidden");
 
-  list.forEach(movie => {
+  filtered.forEach((movie) => {
     const card = document.createElement("div");
-    card.className = "movieCard glass";
-
-    const poster = document.createElement("img");
-    poster.className = "poster";
-    poster.src = movie.poster_url || "https://via.placeholder.com/300x450?text=Poster";
-    poster.alt = movie.title || "Poster";
-
-    const info = document.createElement("div");
-    info.className = "movieInfo";
-
-    const title = document.createElement("div");
-    title.className = "movieTitle";
-    title.textContent = movie.title || "Untitled Movie";
-
-    const meta = document.createElement("div");
-    meta.className = "movieMeta";
-    meta.textContent = (movie.category || ACTIVE_TAB);
-
-    info.appendChild(title);
-    info.appendChild(meta);
-
-    card.appendChild(poster);
-    card.appendChild(info);
-
-    card.addEventListener("click", () => openMovieModal(movie));
-    moviesList.appendChild(card);
+    card.className = "movieCard";
+    card.innerHTML = `
+      <span class="badge">${categoryLabel(movie.category)}</span>
+      <img src="${movie.poster_url}" alt="${movie.name}" />
+      <div class="movieOverlay">
+        <div class="movieTitle">${movie.name}</div>
+      </div>
+    `;
+    card.addEventListener("click", () => openMovie(movie));
+    grid.appendChild(card);
   });
-}
-
-/***********************
-  MOVIE MODAL
-************************/
-function openMovieModal(movie) {
-  selectedMovie = movie;
-
-  modalTitle.textContent = movie.title || "Movie";
-  modalCategory.textContent = movie.category || "";
-
-  const posterUrl = movie.poster_url || "";
-  modalPoster.src = posterUrl || "https://via.placeholder.com/600x400?text=Poster";
-  posterFadeTitle.textContent = movie.title || "";
-
-  modalPosterBg.style.backgroundImage = posterUrl ? `url('${posterUrl}')` : "none";
-
-  show(modalOverlay);
 }
 
 function closeMovieModal() {
-  hide(modalOverlay);
+  if (!modalOverlay) return;
+  modalOverlay.classList.add("hidden");
+  if (modalTrailer) modalTrailer.src = "";
   selectedMovie = null;
 }
 
-closeModal?.addEventListener("click", closeMovieModal);
-modalOverlay?.addEventListener("click", (e) => {
-  if (e.target === modalOverlay) closeMovieModal();
-});
+function openMovie(movie) {
+  selectedMovie = movie;
 
-/***********************
-  TRAILER (ONLY ON TAP)
-************************/
-trailerBtn?.addEventListener("click", () => {
-  if (!selectedMovie) return;
+  if (modalTitle) modalTitle.textContent = movie.name;
+  if (modalCategory) modalCategory.textContent = categoryLabel(movie.category);
 
-  const url = selectedMovie.trailer_url || "";
-  if (!url) {
-    toast("Trailer not available ❌");
-    return;
+  // trailer embed (not autoplay by default)
+  if (modalTrailer) modalTrailer.src = toYouTubeEmbed(movie.trailer_url);
+
+  if (modalPosterBg) {
+    modalPosterBg.style.backgroundImage = `url('${movie.poster_url}')`;
   }
 
-  // Autoplay only after user click
-  modalTrailer.src = url.includes("?")
-    ? `${url}&autoplay=1`
-    : `${url}?autoplay=1`;
+  // related
+  if (relatedRow) {
+    relatedRow.innerHTML = "";
+    const rel = allMovies
+      .filter((x) => x.category === movie.category && x.id !== movie.id)
+      .slice(0, 8);
 
-  show(trailerOverlay);
-});
-
-function closeTrailerScreen() {
-  hide(trailerOverlay);
-  modalTrailer.src = ""; // stop video
-}
-
-closeTrailer?.addEventListener("click", closeTrailerScreen);
-trailerOverlay?.addEventListener("click", (e) => {
-  if (e.target === trailerOverlay) closeTrailerScreen();
-});
-
-/***********************
-  DOWNLOAD SCREEN
-************************/
-downloadBtn?.addEventListener("click", () => {
-  if (!selectedMovie) return;
-
-  // Map links from DB
-  const links = {
-    "480p": selectedMovie.link_480 || "",
-    "720p": selectedMovie.link_720 || "",
-    "1080p": selectedMovie.link_1080 || "",
-    "2160p": selectedMovie.link_2160 || "",
-    "Fast Link": selectedMovie.fast_link || selectedMovie.link_fast || "",
-    "Watch Online": selectedMovie.watch_url || ""
-  };
-
-  // Enable/disable buttons
-  setButtonDisabled(q480, !links["480p"]);
-  setButtonDisabled(q720, !links["720p"]);
-  setButtonDisabled(q1080, !links["1080p"]);
-  setButtonDisabled(q2160, !links["2160p"]);
-  setButtonDisabled(qExtra1, !links["Fast Link"]);
-  setButtonDisabled(watchOnline, !links["Watch Online"]);
-
-  // Attach open actions
-  q480.onclick = () => window.open(links["480p"], "_blank");
-  q720.onclick = () => window.open(links["720p"], "_blank");
-  q1080.onclick = () => window.open(links["1080p"], "_blank");
-  q2160.onclick = () => window.open(links["2160p"], "_blank");
-  qExtra1.onclick = () => window.open(links["Fast Link"], "_blank");
-  watchOnline.onclick = () => window.open(links["Watch Online"], "_blank");
-
-  // Share from download modal
-  dlShareBtn.onclick = async () => {
-    await shareAllLinks(selectedMovie);
-  };
-
-  show(dlOverlay);
-});
-
-function closeDownloadModal() {
-  hide(dlOverlay);
-}
-
-closeDl?.addEventListener("click", closeDownloadModal);
-dlBackBtn?.addEventListener("click", closeDownloadModal);
-dlOverlay?.addEventListener("click", (e) => {
-  if (e.target === dlOverlay) closeDownloadModal();
-});
-
-/***********************
-  SHARE LINKS (COPY + WHATSAPP)
-************************/
-async function shareAllLinks(movie) {
-  if (!movie) return;
-
-  const lines = [];
-  lines.push(`🎬 ${movie.title || "Movie"}`);
-  lines.push(`Category: ${movie.category || ""}`);
-  lines.push("");
-
-  const add = (label, url) => {
-    if (url) lines.push(`${label}: ${url}`);
-  };
-
-  add("480p", movie.link_480);
-  add("720p", movie.link_720);
-  add("1080p", movie.link_1080);
-  add("2160p", movie.link_2160);
-  add("Fast Link", movie.fast_link || movie.link_fast);
-  add("Watch Online", movie.watch_url);
-
-  const text = lines.join("\n");
-
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch (e) {
-    console.warn("Clipboard failed", e);
+    rel.forEach((r) => {
+      const rc = document.createElement("div");
+      rc.className = "relCard";
+      rc.innerHTML = `
+        <img src="${r.poster_url}" alt="${r.name}">
+        <div class="relName">${r.name}</div>
+      `;
+      rc.addEventListener("click", () => openMovie(r));
+      relatedRow.appendChild(rc);
+    });
   }
 
-  // WhatsApp share open
+  if (modalOverlay) modalOverlay.classList.remove("hidden");
+}
+
+/***********************
+  Download quality popup
+************************/
+function setQBtn(btn, url) {
+  if (!btn) return;
+  if (url && url.trim()) {
+    btn.disabled = false;
+    btn.classList.add("enabled");
+    btn.onclick = () => window.open(url, "_blank");
+  } else {
+    btn.disabled = true;
+    btn.classList.remove("enabled");
+    btn.onclick = null;
+  }
+}
+
+function openDownloadPopup() {
+  if (!selectedMovie) return;
+
+  setQBtn(q480, selectedMovie.download_480);
+  setQBtn(q720, selectedMovie.download_720);
+  setQBtn(q1080, selectedMovie.download_1080);
+  setQBtn(q4k, selectedMovie.download_4k);
+
+  if (dlOverlay) dlOverlay.classList.remove("hidden");
+}
+
+/***********************
+  Share
+************************/
+async function shareMovie(movie) {
+  const url = window.location.href;
+  const text = `🎬 ${movie.name}\nWatch on INZOINFO:\n${url}`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: movie.name, text, url });
+      return;
+    } catch {}
+  }
+
   const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
   window.open(wa, "_blank");
-
-  toast("Links copied + WhatsApp opened ✅");
 }
-
-shareBtn?.addEventListener("click", async () => {
-  if (!selectedMovie) return;
-  await shareAllLinks(selectedMovie);
-});
 
 /***********************
-  REQUEST MODAL
+  Telegram Worker Request (PHOTO COMPULSORY)
 ************************/
-openRequest?.addEventListener("click", () => {
-  show(requestOverlay);
-  reqStatus.textContent = "";
-});
+async function sendRequestToWorker({ movieName, movieUrl, photoUrl }) {
+  const res = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      movieName,
+      movieUrl,
+      photoUrl
+    })
+  });
 
-function closeRequestPopup() {
-  hide(requestOverlay);
-  reqMovieName.value = "";
-  reqNote.value = "";
-  if (reqPhotoFile) reqPhotoFile.value = "";
-  reqStatus.textContent = "";
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok || data?.ok === false) {
+    console.log("Worker error:", data);
+    throw new Error(data?.error || "Worker request failed");
+  }
+
+  return data;
 }
-
-closeRequest?.addEventListener("click", closeRequestPopup);
-cancelRequestBtn?.addEventListener("click", closeRequestPopup);
-requestOverlay?.addEventListener("click", (e) => {
-  if (e.target === requestOverlay) closeRequestPopup();
-});
 
 /***********************
-  PHOTO UPLOAD + REQUEST INSERT
+  Data load
 ************************/
-async function uploadRequestPhoto(file) {
-  if (!file) return null;
-
-  const ext = file.name.split(".").pop();
-  const fileName = `request_${Date.now()}.${ext}`;
-
-  const { data, error } = await sb.storage
-    .from("request-photos")
-    .upload(fileName, file, { upsert: true });
-
-  if (error) throw error;
-
-  const { data: pub } = sb.storage
-    .from("request-photos")
-    .getPublicUrl(data.path);
-
-  return pub.publicUrl;
-}
-
-sendRequestBtn?.addEventListener("click", async () => {
+async function loadMoviesFromSupabase() {
+  showSkeleton();
   try {
-    const name = reqMovieName.value.trim();
-    const note = reqNote.value.trim();
-    const file = reqPhotoFile?.files?.[0] || null;
+    allMovies = await supabaseSelectMovies();
+    hideSkeleton();
+    renderTrending();
+    renderMovies();
+  } catch (e) {
+    hideSkeleton();
+    console.log("Error loading movies:", e);
+  }
+}
 
-    if (!name) {
-      toast("Movie name required!");
+/***********************
+  Admin page (optional)
+************************/
+async function initAdminPage() {
+  const form = document.getElementById("movieForm");
+  if (!form) return;
+
+  const adminList = document.getElementById("adminList");
+  const adminStatus = document.getElementById("adminStatus");
+  const saveBtn = document.getElementById("saveMovieBtn");
+
+  async function refreshAdminList() {
+    const movies = await supabaseSelectMovies();
+    adminList.innerHTML = "";
+    movies.forEach((m) => {
+      const row = document.createElement("div");
+      row.className = "adminItem";
+      row.innerHTML = `
+        <img src="${m.poster_url}" alt="${m.name}">
+        <div>
+          <div style="font-weight:900">${m.name}</div>
+          <div style="opacity:0.7;font-size:12px">${categoryLabel(m.category)}</div>
+        </div>
+      `;
+      adminList.appendChild(row);
+    });
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById("movieName").value.trim();
+    const category = document.getElementById("movieCategory").value;
+    const posterFile = document.getElementById("moviePosterFile").files[0];
+    const trailer_url = document.getElementById("movieTrailer").value.trim();
+
+    const download_480 = document.getElementById("dl480").value.trim() || null;
+    const download_720 = document.getElementById("dl720").value.trim() || null;
+    const download_1080 = document.getElementById("dl1080").value.trim() || null;
+    const download_4k = document.getElementById("dl4k").value.trim() || null;
+
+    if (!name || !posterFile || !trailer_url) {
+      alert("Movie name, poster and trailer required!");
       return;
     }
 
-    sendRequestBtn.disabled = true;
-    sendRequestBtn.textContent = "Sending...";
-    reqStatus.textContent = "Uploading / Saving...";
+    try {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Uploading...";
+      adminStatus.textContent = "Uploading poster...";
 
-    let photo_url = null;
-    if (file) {
-      photo_url = await uploadRequestPhoto(file);
+      const poster_url = await uploadToBucket(POSTERS_BUCKET, posterFile);
+
+      adminStatus.textContent = "Saving movie...";
+      await supabaseInsertMovie({
+        name,
+        category,
+        poster_url,
+        trailer_url,
+        download_url:
+          download_720 ||
+          download_480 ||
+          download_1080 ||
+          download_4k ||
+          trailer_url,
+        download_480,
+        download_720,
+        download_1080,
+        download_4k
+      });
+
+      adminStatus.textContent = "Movie saved ✅";
+      alert("Movie saved ✅");
+
+      form.reset();
+      await refreshAdminList();
+    } catch (err) {
+      console.log(err);
+      adminStatus.textContent = "Failed ❌ (check RLS/Storage policies)";
+      alert("Failed to save ❌");
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save Movie";
     }
+  });
 
-    const { error } = await sb.from("requests").insert([
-      {
-        movie_name: name,
-        note: note || null,
-        photo_url: photo_url || null,
-        source: "inzoworld_web"
-      }
-    ]);
-
-    if (error) throw error;
-
-    reqStatus.textContent = "Request Sent ✅";
-    toast("Request Sent ✅");
-    closeRequestPopup();
-  } catch (err) {
-    console.error(err);
-    reqStatus.textContent = "Request Failed ❌";
-    toast("Failed to send request ❌ (RLS / Network)");
-  } finally {
-    sendRequestBtn.disabled = false;
-    sendRequestBtn.textContent = "Send Request";
-  }
-});
+  await refreshAdminList();
+}
 
 /***********************
-  INIT
+  Init
 ************************/
-loadMovies();
+document.addEventListener("DOMContentLoaded", async () => {
+  // index
+  if (grid) {
+    await loadMoviesFromSupabase();
+
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        renderSuggestions(searchInput.value);
+        renderMovies();
+      });
+    }
+
+    document.addEventListener("click", (e) => {
+      // close suggestions when click outside
+      if (!e.target.closest(".searchWrap")) {
+        if (suggestions) suggestions.classList.add("hidden");
+      }
+    });
+
+    tabs.forEach((t) => {
+      t.addEventListener("click", () => {
+        const tab = t.dataset.tab;
+
+        // 18+ confirm
+        if (tab === "ADULT") {
+          if (adultOverlay) adultOverlay.classList.remove("hidden");
+          return;
+        }
+
+        tabs.forEach((x) => x.classList.remove("active"));
+        t.classList.add("active");
+        activeTab = tab;
+        renderMovies();
+      });
+    });
+
+    // Adult confirm handlers
+    if (closeAdult)
+      closeAdult.addEventListener("click", () =>
+        adultOverlay.classList.add("hidden")
+      );
+    if (adultCancel)
+      adultCancel.addEventListener("click", () =>
+        adultOverlay.classList.add("hidden")
+      );
+    if (adultContinue)
+      adultContinue.addEventListener("click", () => {
+        adultOverlay.classList.add("hidden");
+        tabs.forEach((x) => x.classList.remove("active"));
+        const btn = document.querySelector(`.tab[data-tab="ADULT"]`);
+        if (btn) btn.classList.add("active");
+        activeTab = "ADULT";
+        renderMovies();
+      });
+
+    // Movie modal close
+    if (closeModal) closeModal.addEventListener("click", closeMovieModal);
+    if (modalOverlay)
+      modalOverlay.addEventListener("click", (e) => {
+        if (e.target === modalOverlay) closeMovieModal();
+      });
+
+    // Download popup
+    if (downloadOpenBtn)
+      downloadOpenBtn.addEventListener("click", () => openDownloadPopup());
+    if (closeDl) closeDl.addEventListener("click", () => dlOverlay.classList.add("hidden"));
+    if (dlOverlay)
+      dlOverlay.addEventListener("click", (e) => {
+        if (e.target === dlOverlay) dlOverlay.classList.add("hidden");
+      });
+
+    // Share
+    if (shareBtn)
+      shareBtn.addEventListener("click", () => {
+        if (selectedMovie) shareMovie(selectedMovie);
+      });
+
+    // Request popup
+    if (openRequest)
+      openRequest.addEventListener("click", () => {
+        requestOverlay.classList.remove("hidden");
+
+        // reset old filled data every time open
+        const nm = document.getElementById("reqMovieName");
+        const url = document.getElementById("reqMovieUrl");
+        const file = document.getElementById("reqPhotoFile");
+        if (nm) nm.value = "";
+        if (url) url.value = "";
+        if (file) file.value = "";
+      });
+
+    if (closeRequest)
+      closeRequest.addEventListener("click", () => requestOverlay.classList.add("hidden"));
+    if (cancelRequestBtn)
+      cancelRequestBtn.addEventListener("click", () => requestOverlay.classList.add("hidden"));
+
+    // SEND REQUEST (PHOTO COMPULSORY)
+    if (sendRequestBtn)
+      sendRequestBtn.addEventListener("click", async () => {
+        const movieNameEl = document.getElementById("reqMovieName");
+        const movieUrlEl = document.getElementById("reqMovieUrl");
+        const fileEl = document.getElementById("reqPhotoFile");
+
+        const movieName = movieNameEl?.value?.trim() || "";
+        const movieUrl = movieUrlEl?.value?.trim() || "";
+        const reqFile = fileEl?.files?.[0];
+
+        if (!movieName) {
+          alert("Movie name required!");
+          return;
+        }
+
+        // 🔥 PHOTO COMPULSORY
+        if (!reqFile) {
+          alert("Photo compulsory hai! Please upload screenshot/photo ✅");
+          return;
+        }
+
+        try {
+          sendRequestBtn.disabled = true;
+          sendRequestBtn.textContent = "Sending...";
+
+          // upload request photo to supabase storage (public url)
+          const photoUrl = await uploadToBucket(REQUESTS_BUCKET, reqFile);
+
+          // send to worker → worker will send to 2 telegram accounts
+          await sendRequestToWorker({ movieName, movieUrl, photoUrl });
+
+          alert("Request sent ✅");
+          requestOverlay.classList.add("hidden");
+
+          // reset
+          if (movieNameEl) movieNameEl.value = "";
+          if (movieUrlEl) movieUrlEl.value = "";
+          if (fileEl) fileEl.value = "";
+        } catch (e) {
+          console.log(e);
+          alert("Failed to send request ❌");
+        } finally {
+          sendRequestBtn.disabled = false;
+          sendRequestBtn.textContent = "Send Request";
+        }
+      });
+  }
+
+  // admin page
+  await initAdminPage();
+});
