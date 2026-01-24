@@ -2,248 +2,175 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>INZO WORLD</title>
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
+  <!-- Background -->
+  <div class="bg"></div>
+  <div class="bg-overlay"></div>
 
-  <!-- Wallpaper -->
-  <div class="wallpaper"></div>
-  <div class="wallBlur"></div>
+  <!-- App Wrapper -->
+  <div class="app">
 
-  <!-- Top Bar -->
-  <header class="topbar">
-    <div class="brand">
-      <div class="logoBox">INZO</div>
-      <div class="brandText">
-        <div class="brandName">INZO WORLD</div>
-        <div class="brandTag">Premium Movie Hub</div>
+    <!-- Header (Center Logo) -->
+    <header class="topbar glass">
+      <div class="brand">
+        <div class="logo-box">INZO</div>
+        <div class="brand-text">
+          <div class="brand-title">INZO WORLD</div>
+          <div class="brand-sub">Premium Movie Hub</div>
+        </div>
       </div>
+
+      <!-- 2nd row: left menu + right search -->
+      <div class="top-actions">
+        <button id="menuBtn" class="icon-btn" aria-label="Menu">
+          <span class="hamburger"></span>
+        </button>
+
+        <div class="search-wrap">
+          <span class="search-ic">🔎</span>
+          <input id="searchInput" type="text" placeholder="Search movies..." />
+        </div>
+      </div>
+    </header>
+
+    <!-- Category Tabs -->
+    <div class="tabs glass">
+      <button id="tabBollywood" class="tab active">BOLLYWOOD</button>
+      <button id="tabHollywood" class="tab">HOLLYWOOD</button>
+      <button id="tabAdult" class="tab">18+</button>
     </div>
 
-    <div class="searchWrap">
-      <div class="searchBox">
-        <span class="icon">🔎</span>
-        <input id="searchInput" type="text" placeholder="Search movies..." autocomplete="off" />
-      </div>
-      <div id="suggestions" class="suggestions hidden"></div>
-    </div>
-  </header>
-
-  <!-- Side Menu Button -->
-  <button id="menuBtn" class="menuBtn">☰</button>
-
-  <!-- Side Menu -->
-  <div id="menuOverlay" class="overlay hidden">
-    <div class="sideMenu" id="sideMenu">
-      <div class="sideHead">
-        <div class="sideTitle">INZO WORLD</div>
-        <button id="closeMenu" class="closeBtn small">✕</button>
+    <!-- Movies List -->
+    <main class="content">
+      <div id="emptyState" class="empty glass" style="display:none;">
+        No movies found. Try another search.
       </div>
 
-      <div class="sideSection">
-        <div class="sideLabel">Categories</div>
-        <button class="sideItem tab active" data-tab="BOLLYWOOD">Bollywood</button>
-        <button class="sideItem tab" data-tab="HOLLYWOOD">Hollywood</button>
-        <button class="sideItem tab" data-tab="ADULT">18+</button>
-      </div>
+      <div id="movieList" class="movie-list"></div>
+    </main>
 
-      <div class="sideSection">
-        <div class="sideLabel">Actions</div>
-        <button id="openRequest" class="sideItem">📩 Request Movie</button>
-        <button id="openUpload" class="sideItem">⬆ Upload Movie</button>
-      </div>
-    </div>
   </div>
 
-  <main class="container">
-    <div id="skeletonGrid" class="list"></div>
-    <div id="moviesGrid" class="list"></div>
+  <!-- Drawer Overlay -->
+  <div id="drawerOverlay" class="drawer-overlay"></div>
 
-    <div id="emptyState" class="emptyState hidden">
-      No movies found. Try another search.
+  <!-- Drawer Menu -->
+  <aside id="drawer" class="drawer glass">
+    <div class="drawer-head">
+      <div class="drawer-title">INZO WORLD</div>
+      <button id="drawerClose" class="icon-btn small" aria-label="Close">✕</button>
     </div>
-  </main>
 
-  <!-- Movie Detail Modal -->
-  <div id="modalOverlay" class="overlay hidden">
-    <div class="modal modalBig">
-      <button id="closeModal" class="closeBtn">✕</button>
+    <div class="drawer-items">
+      <button id="menuBollywood" class="drawer-btn">Bollywood</button>
+      <button id="menuHollywood" class="drawer-btn">Hollywood</button>
+      <button id="menuAdult" class="drawer-btn">18+ Adult</button>
 
-      <div id="modalPosterBg" class="modalPosterBg"></div>
+      <div class="divider"></div>
 
-      <div class="modalHeader">
-        <h2 id="modalTitle">Movie Name</h2>
-        <p id="modalCategory" class="muted">Category</p>
-      </div>
-
-      <div class="modalActions">
-        <button id="trailerBtn" class="btn btnDark">▶ Trailer</button>
-        <button id="downloadOpenBtn" class="btn btnGold">⬇ Download</button>
-      </div>
+      <button id="menuRequest" class="drawer-btn primary">+ Request</button>
+      <button id="menuUpload" class="drawer-btn warn">⬆ Upload</button>
     </div>
-  </div>
+  </aside>
 
-  <!-- Trailer Screen -->
-  <div id="trailerOverlay" class="overlay hidden">
-    <div class="modal modalBig">
-      <button id="closeTrailer" class="closeBtn">✕</button>
-
-      <div class="modalHeader">
-        <h2 id="trailerTitle">Trailer</h2>
-        <p class="muted">Tap close to go back</p>
+  <!-- Adult Confirm Modal -->
+  <div id="adultModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-title">18+ Content Warning</div>
+      <div class="modal-sub">
+        This section may contain adult content. Are you 18+ and want to continue?
       </div>
 
-      <div class="playerWrap">
-        <iframe
-          id="trailerFrame"
-          class="player"
-          src=""
-          title="Trailer"
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowfullscreen
-        ></iframe>
+      <div class="modal-actions">
+        <button id="adultNo" class="btn ghost">Cancel</button>
+        <button id="adultYes" class="btn primary">Yes, Continue</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Download Screen -->
-  <div id="dlOverlay" class="overlay hidden">
-    <div class="modal modalBig">
-      <button id="closeDl" class="closeBtn">✕</button>
-
-      <div class="modalHeader">
-        <h2 id="dlTitle">Download Options</h2>
-        <p class="muted">Choose quality or watch online</p>
-      </div>
-
-      <div class="qualityGrid">
-        <button id="q480" class="qBtn">480p</button>
-        <button id="q720" class="qBtn">720p</button>
-        <button id="q1080" class="qBtn">1080p</button>
-        <button id="q2160" class="qBtn">2160p</button>
-        <button id="qWatch" class="qBtn big">Watch Online</button>
-        <button id="qShare" class="qBtn big dark">Share Links</button>
-      </div>
-
-      <div class="modalActions">
-        <button id="dlBack" class="btn btnDark">⬅ Back</button>
-      </div>
-
-      <p class="muted tiny">
-        Disabled buttons mean link not available.
-      </p>
     </div>
   </div>
 
   <!-- Request Modal -->
-  <div id="requestOverlay" class="overlay hidden">
-    <div class="modal">
-      <button id="closeRequest" class="closeBtn">✕</button>
-
-      <div class="modalHeader">
-        <h2>Request a Movie</h2>
-        <p class="muted">Photo + Name + URL Telegram pe jayega</p>
+  <div id="requestModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-top">
+        <div>
+          <div class="modal-title">Request a Movie</div>
+          <div class="modal-sub">Direct Telegram request system</div>
+        </div>
+        <button id="requestClose" class="icon-btn small">✕</button>
       </div>
 
       <div class="form">
-        <label>
-          Movie Name *
-          <input id="reqMovieName" type="text" placeholder="Pathaan" />
-        </label>
+        <label>Movie Name *</label>
+        <input id="reqMovie" type="text" placeholder="Movie name..." />
 
-        <label>
-          Photo Upload (optional)
-          <input id="reqPhotoFile" type="file" accept="image/*" />
-        </label>
+        <label>Note (optional)</label>
+        <textarea id="reqNote" placeholder="Language / Quality / Any info"></textarea>
 
-        <label>
-          Movie URL (optional)
-          <input id="reqMovieUrl" type="url" placeholder="https://..." />
-        </label>
+        <label>Upload Screenshot / Poster (optional)</label>
+        <input id="reqPoster" type="file" accept="image/*" />
 
-        <button id="sendRequestBtn" class="btn btnGold">Send Request</button>
-        <button id="cancelRequestBtn" class="btn btnDark">Cancel</button>
+        <button id="sendRequest" class="btn primary big">Send Request</button>
+        <button id="requestCancel" class="btn ghost big">Cancel</button>
       </div>
     </div>
   </div>
 
-  <!-- Upload Modal (Passcode Protected) -->
-  <div id="uploadOverlay" class="overlay hidden">
-    <div class="modal modalBig">
-      <button id="closeUpload" class="closeBtn">✕</button>
-
-      <div class="modalHeader">
-        <h2>Upload Movie</h2>
-        <p class="muted">Passcode required (4-digit)</p>
+  <!-- Passcode Modal -->
+  <div id="passModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-top">
+        <div>
+          <div class="modal-title">Enter Upload Passcode</div>
+          <div class="modal-sub">4-digit required (3 tries only)</div>
+        </div>
+        <button id="passClose" class="icon-btn small">✕</button>
       </div>
 
-      <!-- Passcode -->
-      <div id="passBox" class="form">
-        <label>
-          Enter Passcode
-          <input id="passInput" type="password" maxlength="4" placeholder="0000" inputmode="numeric" />
-        </label>
+      <div class="form">
+        <label>Passcode</label>
+        <input id="passInput" type="password" inputmode="numeric" maxlength="4" placeholder="0000" />
 
-        <button id="passSubmit" class="btn btnGold">Unlock Upload</button>
-        <div id="passMsg" class="muted tiny"></div>
+        <button id="passSubmit" class="btn primary big">Unlock Upload</button>
+        <button id="passCancel" class="btn ghost big">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Modal -->
+  <div id="uploadModal" class="modal">
+    <div class="modal-card glass">
+      <div class="modal-top">
+        <div>
+          <div class="modal-title">Upload Movie</div>
+          <div class="modal-sub">Visible to everyone (pass protected)</div>
+        </div>
+        <button id="uploadClose" class="icon-btn small">✕</button>
       </div>
 
-      <!-- Upload Form -->
-      <div id="uploadFormBox" class="form hidden">
-        <label>
-          Movie Name *
-          <input id="upName" type="text" placeholder="Movie name..." />
-        </label>
+      <div class="form">
+        <label>Movie Name *</label>
+        <input id="uploadTitle" type="text" placeholder="Movie title..." />
 
-        <label>
-          Category *
-          <select id="upCategory">
-            <option value="BOLLYWOOD">Bollywood</option>
-            <option value="HOLLYWOOD">Hollywood</option>
-            <option value="ADULT">18+</option>
-          </select>
-        </label>
+        <label>Year (optional)</label>
+        <input id="uploadYear" type="number" placeholder="2026" />
 
-        <label>
-          Poster Upload *
-          <input id="upPoster" type="file" accept="image/*" />
-        </label>
+        <label>Category</label>
+        <select id="uploadCategory">
+          <option value="bollywood">Bollywood</option>
+          <option value="hollywood">Hollywood</option>
+          <option value="adult">18+ Adult</option>
+        </select>
 
-        <label>
-          Trailer URL (YouTube) *
-          <input id="upTrailer" type="url" placeholder="https://youtube.com/..." />
-        </label>
+        <label>Poster *</label>
+        <input id="uploadPoster" type="file" accept="image/*" />
 
-        <label>
-          480p Link (optional)
-          <input id="up480" type="url" placeholder="https://..." />
-        </label>
-
-        <label>
-          720p Link (optional)
-          <input id="up720" type="url" placeholder="https://..." />
-        </label>
-
-        <label>
-          1080p Link (optional)
-          <input id="up1080" type="url" placeholder="https://..." />
-        </label>
-
-        <label>
-          2160p Link (optional)
-          <input id="up2160" type="url" placeholder="https://..." />
-        </label>
-
-        <label>
-          Watch Online Link (optional)
-          <input id="upWatch" type="url" placeholder="https://..." />
-        </label>
-
-        <button id="uploadBtn" class="btn btnGold">Upload Now</button>
-        <div id="uploadMsg" class="muted tiny"></div>
+        <button id="uploadSubmit" class="btn primary big">Upload Movie</button>
+        <button id="uploadCancel" class="btn ghost big">Cancel</button>
       </div>
     </div>
   </div>
