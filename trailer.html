@@ -4,55 +4,64 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Trailer</title>
-  <link rel="stylesheet" href="style.css"/>
-  <style>
-    .wrap{padding:14px;}
-    .box{
-      border-radius:26px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.04);
-      padding:14px;
-    }
-    video{
-      width:100%;
-      border-radius:20px;
-      border:1px solid rgba(255,255,255,.08);
-      background:#000;
-    }
-    .note{
-      margin-top:10px;
-      color:rgba(233,238,247,.6);
-      font-weight:800;
-      font-size:13px;
-      text-align:center;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body>
 
-  <header class="header">
-    <button class="icon-btn" onclick="history.back()">←</button>
-    <div class="brand">INZO <span>WORLD</span></div>
-    <div style="width:44px;"></div>
-  </header>
-
-  <main class="wrap">
-    <div class="box">
-      <video id="vid" controls playsinline preload="metadata"></video>
-      <div class="note">Trailer will play only when you press Play ▶</div>
+<body class="page">
+  <div class="glassPage">
+    <div class="topBar">
+      <button class="iconBtn" id="btnBack">← Back</button>
+      <div class="titleWrap">
+        <div class="titleMain" id="titleText">Trailer</div>
+        <div class="titleSub">Tap play to watch</div>
+      </div>
+      <div style="width:70px"></div>
     </div>
-  </main>
+
+    <div class="card">
+      <div class="hintText" id="hint"></div>
+      <button class="actionBtn wide" id="btnPlay">▶ Play Trailer</button>
+    </div>
+
+    <div class="card" id="playerWrap" style="display:none;">
+      <iframe id="player" class="trailerFrame"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen></iframe>
+    </div>
+  </div>
 
   <script>
-    const params = new URLSearchParams(location.search);
-    const url = params.get("url");
+    const url = localStorage.getItem("INZO_TRAILER_URL") || "";
+    const title = localStorage.getItem("INZO_TRAILER_TITLE") || "Trailer";
 
-    const vid = document.getElementById("vid");
-    if(url){
-      vid.src = decodeURIComponent(url);
-    }else{
-      alert("Trailer URL missing");
+    document.getElementById("titleText").textContent = title;
+
+    document.getElementById("btnBack").onclick = () => history.back();
+
+    function toEmbed(url) {
+      // If YouTube normal link -> convert to embed
+      try {
+        if (url.includes("youtube.com/watch?v=")) {
+          const id = new URL(url).searchParams.get("v");
+          return `https://www.youtube.com/embed/${id}?autoplay=1`;
+        }
+        if (url.includes("youtu.be/")) {
+          const id = url.split("youtu.be/")[1].split("?")[0];
+          return `https://www.youtube.com/embed/${id}?autoplay=1`;
+        }
+      } catch (e) {}
+      return url; // direct embed link or any other URL
     }
+
+    document.getElementById("btnPlay").onclick = () => {
+      if (!url) {
+        document.getElementById("hint").textContent = "❌ Trailer link not available.";
+        return;
+      }
+      document.getElementById("playerWrap").style.display = "block";
+      document.getElementById("player").src = toEmbed(url);
+      document.getElementById("btnPlay").style.display = "none";
+    };
   </script>
 </body>
 </html>
