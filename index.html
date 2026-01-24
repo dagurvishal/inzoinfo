@@ -5,23 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>INZO WORLD</title>
   <link rel="stylesheet" href="style.css" />
-
-  <!-- Supabase CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-  <!-- Background wallpaper -->
+  <!-- Wallpaper -->
   <div class="wallpaper"></div>
-  <div class="wallpaperBlur"></div>
+  <div class="wallBlur"></div>
 
   <!-- Top Bar -->
-  <header class="topbar glass">
-    <button id="menuBtn" class="iconBtn">☰</button>
-
+  <header class="topbar">
     <div class="brand">
-      <span class="brandA">INZO</span>
-      <span class="brandB">WORLD</span>
+      <div class="logoBox">INZO</div>
+      <div class="brandText">
+        <div class="brandName">INZO WORLD</div>
+        <div class="brandTag">Premium Movie Hub</div>
+      </div>
     </div>
 
     <div class="searchWrap">
@@ -31,77 +29,75 @@
       </div>
       <div id="suggestions" class="suggestions hidden"></div>
     </div>
-
-    <button id="openRequest" class="reqBtnTop">＋ Request</button>
   </header>
 
+  <!-- Side Menu Button -->
+  <button id="menuBtn" class="menuBtn">☰</button>
+
   <!-- Side Menu -->
-  <div id="sideOverlay" class="sideOverlay hidden"></div>
-  <aside id="sideMenu" class="sideMenu hidden glass">
-    <div class="sideHead">
-      <div class="sideTitle">INZO WORLD</div>
-      <button id="closeMenuBtn" class="iconBtn">✕</button>
-    </div>
+  <div id="menuOverlay" class="overlay hidden">
+    <div class="sideMenu" id="sideMenu">
+      <div class="sideHead">
+        <div class="sideTitle">INZO WORLD</div>
+        <button id="closeMenu" class="closeBtn small">✕</button>
+      </div>
 
-    <div class="sideLinks">
-      <button class="sideLink tabBtn active" data-tab="BOLLYWOOD">Bollywood</button>
-      <button class="sideLink tabBtn" data-tab="HOLLYWOOD">Hollywood</button>
-      <button class="sideLink tabBtn" data-tab="ADULT">18+ Adult</button>
-    </div>
+      <div class="sideSection">
+        <div class="sideLabel">Categories</div>
+        <button class="sideItem tab active" data-tab="BOLLYWOOD">Bollywood</button>
+        <button class="sideItem tab" data-tab="HOLLYWOOD">Hollywood</button>
+        <button class="sideItem tab" data-tab="ADULT">18+</button>
+      </div>
 
-    <div class="sideFoot muted">
-      Movies list + Request system connected to Supabase ✅
+      <div class="sideSection">
+        <div class="sideLabel">Actions</div>
+        <button id="openRequest" class="sideItem">📩 Request Movie</button>
+        <button id="openUpload" class="sideItem">⬆ Upload Movie</button>
+      </div>
     </div>
-  </aside>
+  </div>
 
-  <!-- Main -->
   <main class="container">
-    <div id="moviesList" class="moviesList"></div>
+    <div id="skeletonGrid" class="list"></div>
+    <div id="moviesGrid" class="list"></div>
 
-    <div id="emptyState" class="emptyState hidden glass">
+    <div id="emptyState" class="emptyState hidden">
       No movies found. Try another search.
     </div>
   </main>
 
-  <!-- Movie Details Modal -->
+  <!-- Movie Detail Modal -->
   <div id="modalOverlay" class="overlay hidden">
-    <div class="modalBig glass">
+    <div class="modal modalBig">
       <button id="closeModal" class="closeBtn">✕</button>
 
       <div id="modalPosterBg" class="modalPosterBg"></div>
 
-      <div class="modalTop">
-        <div>
-          <h2 id="modalTitle" class="modalTitle">Movie Name</h2>
-          <p id="modalCategory" class="muted">Category</p>
-        </div>
-      </div>
-
-      <div class="modalPosterWrap">
-        <img id="modalPoster" class="modalPoster" src="" alt="Poster" />
-        <div class="posterFadeTitle" id="posterFadeTitle"></div>
+      <div class="modalHeader">
+        <h2 id="modalTitle">Movie Name</h2>
+        <p id="modalCategory" class="muted">Category</p>
       </div>
 
       <div class="modalActions">
         <button id="trailerBtn" class="btn btnDark">▶ Trailer</button>
-        <button id="downloadBtn" class="btn btnGold">⬇ Download</button>
-      </div>
-
-      <div class="modalActions2">
-        <button id="shareBtn" class="btn btnSoft">⤴ Share Links</button>
+        <button id="downloadOpenBtn" class="btn btnGold">⬇ Download</button>
       </div>
     </div>
   </div>
 
   <!-- Trailer Screen -->
   <div id="trailerOverlay" class="overlay hidden">
-    <div class="modalBig glass trailerModal">
+    <div class="modal modalBig">
       <button id="closeTrailer" class="closeBtn">✕</button>
-      <h2 class="modalTitle">Trailer</h2>
+
+      <div class="modalHeader">
+        <h2 id="trailerTitle">Trailer</h2>
+        <p class="muted">Tap close to go back</p>
+      </div>
 
       <div class="playerWrap">
         <iframe
-          id="modalTrailer"
+          id="trailerFrame"
           class="player"
           src=""
           title="Trailer"
@@ -113,72 +109,49 @@
     </div>
   </div>
 
-  <!-- Download Modal -->
+  <!-- Download Screen -->
   <div id="dlOverlay" class="overlay hidden">
-    <div class="modalBig glass">
+    <div class="modal modalBig">
       <button id="closeDl" class="closeBtn">✕</button>
 
-      <div class="modalTop">
-        <div>
-          <h2 class="modalTitle">Download Options</h2>
-          <p class="muted">Select quality or watch online</p>
-        </div>
+      <div class="modalHeader">
+        <h2 id="dlTitle">Download Options</h2>
+        <p class="muted">Choose quality or watch online</p>
       </div>
 
-      <div class="qualityGrid6">
+      <div class="qualityGrid">
         <button id="q480" class="qBtn">480p</button>
         <button id="q720" class="qBtn">720p</button>
         <button id="q1080" class="qBtn">1080p</button>
         <button id="q2160" class="qBtn">2160p</button>
-        <button id="qExtra1" class="qBtn">Fast Link</button>
-        <button id="watchOnline" class="qBtn qBtnWide">▶ Watch Online</button>
+        <button id="qWatch" class="qBtn big">Watch Online</button>
+        <button id="qShare" class="qBtn big dark">Share Links</button>
       </div>
 
-      <div class="dlFooter">
-        <button id="dlBackBtn" class="btn btnDark">← Back</button>
-        <button id="dlShareBtn" class="btn btnSoft">⤴ Share</button>
+      <div class="modalActions">
+        <button id="dlBack" class="btn btnDark">⬅ Back</button>
       </div>
 
       <p class="muted tiny">
-        Disabled buttons = link not available.
+        Disabled buttons mean link not available.
       </p>
-    </div>
-  </div>
-
-  <!-- Adult Confirm -->
-  <div id="adultOverlay" class="overlay hidden">
-    <div class="modal glass adultModal">
-      <h2 class="modalTitle">18+ Content</h2>
-      <p class="muted">This category is for adults only. Continue?</p>
-
-      <div class="modalActions">
-        <button id="adultCancel" class="btn btnDark">Cancel</button>
-        <button id="adultContinue" class="btn btnGold">Yes, Continue</button>
-      </div>
     </div>
   </div>
 
   <!-- Request Modal -->
   <div id="requestOverlay" class="overlay hidden">
-    <div class="modalBig glass">
+    <div class="modal">
       <button id="closeRequest" class="closeBtn">✕</button>
 
-      <div class="modalTop">
-        <div>
-          <h2 class="modalTitle">Request a Movie</h2>
-          <p class="muted">Request Supabase me save hogi ✅</p>
-        </div>
+      <div class="modalHeader">
+        <h2>Request a Movie</h2>
+        <p class="muted">Photo + Name + URL Telegram pe jayega</p>
       </div>
 
       <div class="form">
         <label>
           Movie Name *
-          <input id="reqMovieName" type="text" placeholder="Pathaan / Avengers..." />
-        </label>
-
-        <label>
-          Note (optional)
-          <textarea id="reqNote" placeholder="Language / Quality / Any info"></textarea>
+          <input id="reqMovieName" type="text" placeholder="Pathaan" />
         </label>
 
         <label>
@@ -186,20 +159,94 @@
           <input id="reqPhotoFile" type="file" accept="image/*" />
         </label>
 
+        <label>
+          Movie URL (optional)
+          <input id="reqMovieUrl" type="url" placeholder="https://..." />
+        </label>
+
         <button id="sendRequestBtn" class="btn btnGold">Send Request</button>
         <button id="cancelRequestBtn" class="btn btnDark">Cancel</button>
-
-        <div id="reqStatus" class="reqStatus"></div>
       </div>
     </div>
   </div>
 
-  <!-- Bottom Tabs -->
-  <nav class="bottomTabs glass">
-    <button class="tab tabBtn active" data-tab="BOLLYWOOD">BOLLYWOOD</button>
-    <button class="tab tabBtn" data-tab="HOLLYWOOD">HOLLYWOOD</button>
-    <button class="tab tabBtn" data-tab="ADULT">18+</button>
-  </nav>
+  <!-- Upload Modal (Passcode Protected) -->
+  <div id="uploadOverlay" class="overlay hidden">
+    <div class="modal modalBig">
+      <button id="closeUpload" class="closeBtn">✕</button>
+
+      <div class="modalHeader">
+        <h2>Upload Movie</h2>
+        <p class="muted">Passcode required (4-digit)</p>
+      </div>
+
+      <!-- Passcode -->
+      <div id="passBox" class="form">
+        <label>
+          Enter Passcode
+          <input id="passInput" type="password" maxlength="4" placeholder="0000" inputmode="numeric" />
+        </label>
+
+        <button id="passSubmit" class="btn btnGold">Unlock Upload</button>
+        <div id="passMsg" class="muted tiny"></div>
+      </div>
+
+      <!-- Upload Form -->
+      <div id="uploadFormBox" class="form hidden">
+        <label>
+          Movie Name *
+          <input id="upName" type="text" placeholder="Movie name..." />
+        </label>
+
+        <label>
+          Category *
+          <select id="upCategory">
+            <option value="BOLLYWOOD">Bollywood</option>
+            <option value="HOLLYWOOD">Hollywood</option>
+            <option value="ADULT">18+</option>
+          </select>
+        </label>
+
+        <label>
+          Poster Upload *
+          <input id="upPoster" type="file" accept="image/*" />
+        </label>
+
+        <label>
+          Trailer URL (YouTube) *
+          <input id="upTrailer" type="url" placeholder="https://youtube.com/..." />
+        </label>
+
+        <label>
+          480p Link (optional)
+          <input id="up480" type="url" placeholder="https://..." />
+        </label>
+
+        <label>
+          720p Link (optional)
+          <input id="up720" type="url" placeholder="https://..." />
+        </label>
+
+        <label>
+          1080p Link (optional)
+          <input id="up1080" type="url" placeholder="https://..." />
+        </label>
+
+        <label>
+          2160p Link (optional)
+          <input id="up2160" type="url" placeholder="https://..." />
+        </label>
+
+        <label>
+          Watch Online Link (optional)
+          <input id="upWatch" type="url" placeholder="https://..." />
+        </label>
+
+        <button id="uploadBtn" class="btn btnGold">Upload Now</button>
+        <div id="uploadMsg" class="muted tiny"></div>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
