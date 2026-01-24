@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Download</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .wrap{padding:14px;}
+    .card{
+      border-radius:26px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      padding:14px;
+    }
+    .title{
+      font-weight:1000;
+      font-size:18px;
+      margin-bottom:8px;
+    }
+    .muted2{
+      color:rgba(233,238,247,.6);
+      font-weight:800;
+      font-size:13px;
+      margin-bottom:12px;
+    }
+    .btn-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    .watch-full{
+      margin-top:12px;
+    }
+    .btn-disabled{
+      opacity:.35;
+      pointer-events:none;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <button class="icon-btn" onclick="history.back()">←</button>
+    <div class="brand">INZO <span>WORLD</span></div>
+    <button class="icon-btn" onclick="shareNow()">⤴</button>
+  </header>
+
+  <main class="wrap">
+    <div class="card">
+      <div class="title" id="movieTitle">Downloads</div>
+      <div class="muted2">Choose quality 👇</div>
+
+      <div class="btn-grid" id="buttons"></div>
+
+      <button id="watchBtn" class="btn btn-gold watch-full" onclick="openWatch()">
+        WATCH ONLINE
+      </button>
+
+      <button class="btn btn-dark" onclick="shareNow()">Share Links</button>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://ehnkxlccztcjqznuwtto.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc";
+
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+
+    let downloads = [];
+    let watchUrl = "";
+    let title = "";
+
+    async function fetchMovie(){
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/movies?select=*&id=eq.${id}`,{
+        headers:{
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        }
+      });
+      const data = await res.json();
+      const m = data?.[0];
+      title = m?.title || "Movie";
+      watchUrl = m?.watch_url || "";
+      document.getElementById("movieTitle").innerText = title;
+
+      const watchBtn = document.getElementById("watchBtn");
+      if(!watchUrl){
+        watchBtn.classList.add("btn-disabled");
+        watchBtn.innerText = "WATCH ONLINE (Not Available)";
+      }
+    }
+
+    async function fetchDownloads(){
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/downloads?select=*&movie_id=eq.${id}&order=quality.asc`,{
+        headers:{
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        }
+      });
+      downloads = await res.json();
+      renderButtons();
+    }
+
+    function renderButtons(){
+      const wrap = document.getElementById("buttons");
+      wrap.innerHTML = "";
+
+      const qualities = ["480p","720p","1080p","2160p"];
+
+      qualities.forEach(q=>{
+        const row = downloads.find(d => (d.quality || "").toLowerCase() === q.toLowerCase());
+
+        const btn = document.createElement("button");
+        btn.className = "btn btn-dark";
+        btn.innerText = q;
+
+        if(!row || row.is_enabled === false){
+          btn.classList.add("btn-disabled");
+          btn.innerText = `${q} (Disabled)`;
+        } else {
+          btn.onclick = ()=> window.open(row.url, "_blank");
+        }
+
+        wrap.appendChild(btn);
+      });
+    }
+
+    function openWatch(){
+      if(!watchUrl) return;
+      window.open(watchUrl, "_blank");
+    }
+
+    async function shareNow(){
+      let text = `INZO WORLD Downloads - ${title}\n\n`;
+
+      const qualities = ["480p","720p","1080p","2160p"];
+      qualities.forEach(q=>{
+        const row = downloads.find(d => (d.quality || "").toLowerCase() === q.toLowerCase());
+        if(row && row.is_enabled !== false){
+          text += `${q} - ${row.url}\n`;
+        } else {
+          text += `${q} - Not Available\n`;
+        }
+      });
+
+      if(watchUrl){
+        text += `\nWATCH ONLINE - ${watchUrl}`;
+      }
+
+      try{
+        await navigator.clipboard.writeText(text);
+      }catch(e){
+        console.log("Clipboard error", e);
+      }
+
+      // WhatsApp forward
+      const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      window.open(wa, "_blank");
+    }
+
+    fetchMovie();
+    fetchDownloads();
+  </script>
+</body>
+</html>
