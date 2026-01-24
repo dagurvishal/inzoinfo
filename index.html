@@ -2,120 +2,110 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>INZO INFO</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>INZO WORLD</title>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
-  <!-- Background overlay -->
-  <div class="bgOverlay"></div>
-
-  <!-- Top Header -->
-  <header class="topHeader">
-    <div class="logoBox">
-      <span class="logoText">INZO</span>
-      <span class="logoText gold">INFO</span>
+  <!-- Drawer -->
+  <aside id="drawer" class="drawer">
+    <div class="drawer-top">
+      <div class="drawer-brand">INZO <span>WORLD</span></div>
+      <button class="icon-btn" onclick="toggleDrawer(false)">✕</button>
     </div>
 
-    <div class="searchBox">
-      <span class="searchIcon">🔍</span>
-      <input id="searchInput" type="text" placeholder="Search movies..." />
+    <div class="drawer-section-title">Categories</div>
+
+    <button class="menu-item" onclick="setCategory('bollywood')">
+      Bollywood <span>›</span>
+    </button>
+
+    <button class="menu-item" onclick="setCategory('hollywood')">
+      Hollywood <span>›</span>
+    </button>
+
+    <button class="menu-item" onclick="setCategory('adult')">
+      Adult / 18+ <span>›</span>
+    </button>
+
+    <div class="drawer-section-title">Actions</div>
+
+    <button class="menu-item" onclick="openRequestModal()">
+      Request Movie <span>＋</span>
+    </button>
+
+    <button class="menu-item" onclick="setCategory(currentCategory)">
+      Movie List <span>▦</span>
+    </button>
+
+    <div class="drawer-footer">
+      <div class="muted">Premium UI • INZO WORLD</div>
+    </div>
+  </aside>
+
+  <!-- Backdrop overlay -->
+  <div id="overlay" class="overlay" onclick="toggleDrawer(false)"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <button class="icon-btn" onclick="toggleDrawer(true)">☰</button>
+
+    <div class="brand">
+      INZO <span>WORLD</span>
+    </div>
+
+    <div class="search">
+      <span class="search-ic">🔎</span>
+      <input id="searchInput" type="text" placeholder="Search movies..." oninput="applyFilters()" />
     </div>
   </header>
 
-  <!-- Main Movies List -->
-  <main class="container">
-    <div id="moviesGrid" class="grid"></div>
-    <div id="emptyState" class="emptyState hidden">
+  <!-- Main -->
+  <main class="main">
+    <div class="top-row">
+      <div class="pill" id="activeCategoryPill">BOLLYWOOD</div>
+      <button class="pill pill-gold" onclick="openRequestModal()">＋ Request</button>
+    </div>
+
+    <section id="moviesGrid" class="grid"></section>
+
+    <div id="emptyState" class="empty" style="display:none;">
       No movies found. Try another search.
     </div>
   </main>
 
-  <!-- Floating Request Button -->
-  <button id="openRequestBtn" class="reqFab">+ Request</button>
-
-  <!-- Bottom Tabs -->
-  <nav class="bottomTabs">
-    <button class="tab active" data-tab="BOLLYWOOD">BOLLYWOOD</button>
-    <button class="tab" data-tab="HOLLYWOOD">HOLLYWOOD</button>
-    <button class="tab" data-tab="ADULT">18+</button>
-  </nav>
-
-  <!-- Movie Modal -->
-  <div id="movieModal" class="modal hidden">
-    <div class="modalCard bigModal">
-      <button class="closeBtn" id="closeMovieModal">✕</button>
-
-      <div class="modalPosterWrap">
-        <img id="modalPoster" src="" alt="Poster" />
-        <div class="modalPosterFade"></div>
-        <h2 id="modalTitle" class="modalTitle"></h2>
-      </div>
-
-      <div class="modalBody">
-        <p id="modalDesc" class="modalDesc"></p>
-
-        <div class="modalActions">
-          <button id="modalRequestBtn" class="btnPrimary">Request This</button>
-          <button id="modalCloseBtn" class="btnGhost">Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Request Modal -->
-  <div id="requestModal" class="modal hidden">
-    <div class="modalCard">
-      <button class="closeBtn" id="closeRequestModal">✕</button>
+  <div id="requestModal" class="modal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Request a Movie</div>
+          <div class="modal-sub">Request Supabase me save hogi ✅</div>
+        </div>
+        <button class="icon-btn" onclick="closeRequestModal()">✕</button>
+      </div>
 
-      <h2 class="modalHeading">Request a Movie</h2>
-      <p class="modalSub">Request Supabase me save hogi ✅</p>
-
-      <form id="requestForm" class="form">
+      <div class="form">
         <label>Movie Name *</label>
-        <input id="reqMovieName" type="text" required placeholder="Enter movie name..." />
+        <input id="reqMovieName" type="text" placeholder="Eg: Pushpa 2 (Hindi)" />
 
-        <label>Quality</label>
-        <select id="reqQuality">
-          <option value="720p">720p</option>
-          <option value="1080p" selected>1080p</option>
-          <option value="4K">4K</option>
-        </select>
+        <label>Note (optional)</label>
+        <textarea id="reqNote" rows="3" placeholder="Language / Quality / Any info"></textarea>
 
-        <label>Language</label>
-        <select id="reqLanguage">
-          <option value="Hindi" selected>Hindi</option>
-          <option value="English">English</option>
-          <option value="Dual Audio">Dual Audio</option>
-        </select>
+        <button id="reqSendBtn" class="btn btn-gold" onclick="submitRequest()">
+          Send Request
+        </button>
 
-        <label>Notes (optional)</label>
-        <textarea id="reqNotes" placeholder="Any extra details..."></textarea>
+        <button class="btn btn-dark" onclick="closeRequestModal()">
+          Cancel
+        </button>
 
-        <button id="submitRequestBtn" type="submit" class="btnPrimary">Send Request</button>
-        <button id="cancelRequestBtn" type="button" class="btnGhost">Cancel</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Age Confirm Modal -->
-  <div id="ageModal" class="modal hidden">
-    <div class="modalCard ageCard">
-      <h2 class="modalHeading">18+ Content</h2>
-      <p class="modalSub">Are you sure you are 18+ ?</p>
-
-      <div class="ageActions">
-        <button id="ageYes" class="btnPrimary">Yes, Continue</button>
-        <button id="ageNo" class="btnGhost">No, Go Back</button>
+        <div id="reqMsg" class="req-msg"></div>
       </div>
     </div>
   </div>
 
-  <!-- Toast -->
-  <div id="toast" class="toast hidden"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>
