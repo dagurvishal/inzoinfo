@@ -2,109 +2,204 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>INZO WORLD</title>
-  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-  <!-- Drawer -->
-  <aside id="drawer" class="drawer">
-    <div class="drawer-top">
-      <div class="drawer-brand">INZO <span>WORLD</span></div>
-      <button class="icon-btn" onclick="toggleDrawer(false)">✕</button>
+  <!-- Background wallpaper -->
+  <div class="wallpaper"></div>
+  <div class="wallpaperBlur"></div>
+
+  <!-- Top Bar -->
+  <header class="topbar glass">
+    <button id="menuBtn" class="iconBtn">☰</button>
+
+    <div class="brand">
+      <span class="brandA">INZO</span>
+      <span class="brandB">WORLD</span>
     </div>
 
-    <div class="drawer-section-title">Categories</div>
+    <div class="searchWrap">
+      <div class="searchBox">
+        <span class="icon">🔎</span>
+        <input id="searchInput" type="text" placeholder="Search movies..." autocomplete="off" />
+      </div>
+      <div id="suggestions" class="suggestions hidden"></div>
+    </div>
 
-    <button class="menu-item" onclick="setCategory('bollywood')">
-      Bollywood <span>›</span>
-    </button>
+    <button id="openRequest" class="reqBtnTop">＋ Request</button>
+  </header>
 
-    <button class="menu-item" onclick="setCategory('hollywood')">
-      Hollywood <span>›</span>
-    </button>
+  <!-- Side Menu -->
+  <div id="sideOverlay" class="sideOverlay hidden"></div>
+  <aside id="sideMenu" class="sideMenu hidden glass">
+    <div class="sideHead">
+      <div class="sideTitle">INZO WORLD</div>
+      <button id="closeMenuBtn" class="iconBtn">✕</button>
+    </div>
 
-    <button class="menu-item" onclick="setCategory('adult')">
-      Adult / 18+ <span>›</span>
-    </button>
+    <div class="sideLinks">
+      <button class="sideLink tabBtn active" data-tab="BOLLYWOOD">Bollywood</button>
+      <button class="sideLink tabBtn" data-tab="HOLLYWOOD">Hollywood</button>
+      <button class="sideLink tabBtn" data-tab="ADULT">18+ Adult</button>
+    </div>
 
-    <div class="drawer-section-title">Actions</div>
-
-    <button class="menu-item" onclick="openRequestModal()">
-      Request Movie <span>＋</span>
-    </button>
-
-    <button class="menu-item" onclick="setCategory(currentCategory)">
-      Movie List <span>▦</span>
-    </button>
-
-    <div class="drawer-footer">
-      <div class="muted">Premium UI • INZO WORLD</div>
+    <div class="sideFoot muted">
+      Movies list + Request system connected to Supabase ✅
     </div>
   </aside>
 
-  <!-- Backdrop overlay -->
-  <div id="overlay" class="overlay" onclick="toggleDrawer(false)"></div>
-
-  <!-- Header -->
-  <header class="header">
-    <button class="icon-btn" onclick="toggleDrawer(true)">☰</button>
-
-    <div class="brand">
-      INZO <span>WORLD</span>
-    </div>
-
-    <div class="search">
-      <span class="search-ic">🔎</span>
-      <input id="searchInput" type="text" placeholder="Search movies..." oninput="applyFilters()" />
-    </div>
-  </header>
-
   <!-- Main -->
-  <main class="main">
-    <div class="top-row">
-      <div class="pill" id="activeCategoryPill">BOLLYWOOD</div>
-      <button class="pill pill-gold" onclick="openRequestModal()">＋ Request</button>
-    </div>
+  <main class="container">
+    <div id="moviesList" class="moviesList"></div>
 
-    <section id="moviesGrid" class="grid"></section>
-
-    <div id="emptyState" class="empty" style="display:none;">
+    <div id="emptyState" class="emptyState hidden glass">
       No movies found. Try another search.
     </div>
   </main>
 
-  <!-- Request Modal -->
-  <div id="requestModal" class="modal">
-    <div class="modal-card">
-      <div class="modal-head">
+  <!-- Movie Details Modal -->
+  <div id="modalOverlay" class="overlay hidden">
+    <div class="modalBig glass">
+      <button id="closeModal" class="closeBtn">✕</button>
+
+      <div id="modalPosterBg" class="modalPosterBg"></div>
+
+      <div class="modalTop">
         <div>
-          <div class="modal-title">Request a Movie</div>
-          <div class="modal-sub">Request Supabase me save hogi ✅</div>
+          <h2 id="modalTitle" class="modalTitle">Movie Name</h2>
+          <p id="modalCategory" class="muted">Category</p>
         </div>
-        <button class="icon-btn" onclick="closeRequestModal()">✕</button>
       </div>
 
-      <div class="form">
-        <label>Movie Name *</label>
-        <input id="reqMovieName" type="text" placeholder="Eg: Pushpa 2 (Hindi)" />
+      <div class="modalPosterWrap">
+        <img id="modalPoster" class="modalPoster" src="" alt="Poster" />
+        <div class="posterFadeTitle" id="posterFadeTitle"></div>
+      </div>
 
-        <label>Note (optional)</label>
-        <textarea id="reqNote" rows="3" placeholder="Language / Quality / Any info"></textarea>
+      <div class="modalActions">
+        <button id="trailerBtn" class="btn btnDark">▶ Trailer</button>
+        <button id="downloadBtn" class="btn btnGold">⬇ Download</button>
+      </div>
 
-        <button id="reqSendBtn" class="btn btn-gold" onclick="submitRequest()">
-          Send Request
-        </button>
-
-        <button class="btn btn-dark" onclick="closeRequestModal()">
-          Cancel
-        </button>
-
-        <div id="reqMsg" class="req-msg"></div>
+      <div class="modalActions2">
+        <button id="shareBtn" class="btn btnSoft">⤴ Share Links</button>
       </div>
     </div>
   </div>
+
+  <!-- Trailer Screen -->
+  <div id="trailerOverlay" class="overlay hidden">
+    <div class="modalBig glass trailerModal">
+      <button id="closeTrailer" class="closeBtn">✕</button>
+      <h2 class="modalTitle">Trailer</h2>
+
+      <div class="playerWrap">
+        <iframe
+          id="modalTrailer"
+          class="player"
+          src=""
+          title="Trailer"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Download Modal -->
+  <div id="dlOverlay" class="overlay hidden">
+    <div class="modalBig glass">
+      <button id="closeDl" class="closeBtn">✕</button>
+
+      <div class="modalTop">
+        <div>
+          <h2 class="modalTitle">Download Options</h2>
+          <p class="muted">Select quality or watch online</p>
+        </div>
+      </div>
+
+      <div class="qualityGrid6">
+        <button id="q480" class="qBtn">480p</button>
+        <button id="q720" class="qBtn">720p</button>
+        <button id="q1080" class="qBtn">1080p</button>
+        <button id="q2160" class="qBtn">2160p</button>
+        <button id="qExtra1" class="qBtn">Fast Link</button>
+        <button id="watchOnline" class="qBtn qBtnWide">▶ Watch Online</button>
+      </div>
+
+      <div class="dlFooter">
+        <button id="dlBackBtn" class="btn btnDark">← Back</button>
+        <button id="dlShareBtn" class="btn btnSoft">⤴ Share</button>
+      </div>
+
+      <p class="muted tiny">
+        Disabled buttons = link not available.
+      </p>
+    </div>
+  </div>
+
+  <!-- Adult Confirm -->
+  <div id="adultOverlay" class="overlay hidden">
+    <div class="modal glass adultModal">
+      <h2 class="modalTitle">18+ Content</h2>
+      <p class="muted">This category is for adults only. Continue?</p>
+
+      <div class="modalActions">
+        <button id="adultCancel" class="btn btnDark">Cancel</button>
+        <button id="adultContinue" class="btn btnGold">Yes, Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Request Modal -->
+  <div id="requestOverlay" class="overlay hidden">
+    <div class="modalBig glass">
+      <button id="closeRequest" class="closeBtn">✕</button>
+
+      <div class="modalTop">
+        <div>
+          <h2 class="modalTitle">Request a Movie</h2>
+          <p class="muted">Request Supabase me save hogi ✅</p>
+        </div>
+      </div>
+
+      <div class="form">
+        <label>
+          Movie Name *
+          <input id="reqMovieName" type="text" placeholder="Pathaan / Avengers..." />
+        </label>
+
+        <label>
+          Note (optional)
+          <textarea id="reqNote" placeholder="Language / Quality / Any info"></textarea>
+        </label>
+
+        <label>
+          Photo Upload (optional)
+          <input id="reqPhotoFile" type="file" accept="image/*" />
+        </label>
+
+        <button id="sendRequestBtn" class="btn btnGold">Send Request</button>
+        <button id="cancelRequestBtn" class="btn btnDark">Cancel</button>
+
+        <div id="reqStatus" class="reqStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Tabs -->
+  <nav class="bottomTabs glass">
+    <button class="tab tabBtn active" data-tab="BOLLYWOOD">BOLLYWOOD</button>
+    <button class="tab tabBtn" data-tab="HOLLYWOOD">HOLLYWOOD</button>
+    <button class="tab tabBtn" data-tab="ADULT">18+</button>
+  </nav>
 
   <script src="app.js"></script>
 </body>
