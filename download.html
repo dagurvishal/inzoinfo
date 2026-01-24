@@ -50,13 +50,13 @@
 
     // Links
     const links = {
-      "480p": movie?.link_480 || "",
-      "720p": movie?.link_720 || "",
-      "1080p": movie?.link_1080 || "",
-      "2160p": movie?.link_2160 || "",
-      "Watch Online": movie?.watch_online || "",
-      "Trailer": movie?.trailer_url || ""
-    };
+  "480p": movie?.download_480 || "",
+  "720p": movie?.download_720 || "",
+  "1080p": movie?.download_1080 || "",
+  "2160p": movie?.download_2160 || "",
+  "Watch Online": movie?.watch_online || "",
+  "Trailer": movie?.trailer_url || ""
+};
 
     function setBtnState(btnId, url) {
       const btn = document.getElementById(btnId);
