@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trailer</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .wrap{padding:14px;}
+    .box{
+      border-radius:26px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      padding:14px;
+    }
+    video{
+      width:100%;
+      border-radius:20px;
+      border:1px solid rgba(255,255,255,.08);
+      background:#000;
+    }
+    .note{
+      margin-top:10px;
+      color:rgba(233,238,247,.6);
+      font-weight:800;
+      font-size:13px;
+      text-align:center;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <button class="icon-btn" onclick="history.back()">←</button>
+    <div class="brand">INZO <span>WORLD</span></div>
+    <div style="width:44px;"></div>
+  </header>
+
+  <main class="wrap">
+    <div class="box">
+      <video id="vid" controls playsinline preload="metadata"></video>
+      <div class="note">Trailer will play only when you press Play ▶</div>
+    </div>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const url = params.get("url");
+
+    const vid = document.getElementById("vid");
+    if(url){
+      vid.src = decodeURIComponent(url);
+    }else{
+      alert("Trailer URL missing");
+    }
+  </script>
+</body>
+</html>
