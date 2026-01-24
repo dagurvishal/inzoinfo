@@ -1,285 +1,223 @@
+// ===============================
+// INZO WORLD - FULL APP JS
+// ===============================
+
+// 🔥 Your Supabase (Public)
 const SUPABASE_URL = "https://ehnkxlccztcjqznuwtto.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Tables
+const MOVIES_TABLE = "movies";
+const REQUESTS_TABLE = "requests";
+const DOWNLOADS_TABLE = "downloads";
 
-// UI refs
-const moviesGrid = document.getElementById("moviesGrid");
+// UI State
+let allMovies = [];
+let filteredMovies = [];
+let currentCategory = "bollywood";
+
+// Elements
+const drawer = document.getElementById("drawer");
+const overlay = document.getElementById("overlay");
+const grid = document.getElementById("moviesGrid");
 const emptyState = document.getElementById("emptyState");
+const activeCategoryPill = document.getElementById("activeCategoryPill");
 const searchInput = document.getElementById("searchInput");
 
-const openRequestBtn = document.getElementById("openRequestBtn");
+// Request modal
 const requestModal = document.getElementById("requestModal");
-const closeRequestModal = document.getElementById("closeRequestModal");
-const cancelRequestBtn = document.getElementById("cancelRequestBtn");
-const requestForm = document.getElementById("requestForm");
-
 const reqMovieName = document.getElementById("reqMovieName");
-const reqQuality = document.getElementById("reqQuality");
-const reqLanguage = document.getElementById("reqLanguage");
-const reqNotes = document.getElementById("reqNotes");
-const submitRequestBtn = document.getElementById("submitRequestBtn");
+const reqNote = document.getElementById("reqNote");
+const reqMsg = document.getElementById("reqMsg");
+const reqSendBtn = document.getElementById("reqSendBtn");
 
-const movieModal = document.getElementById("movieModal");
-const closeMovieModal = document.getElementById("closeMovieModal");
-const modalCloseBtn = document.getElementById("modalCloseBtn");
-const modalRequestBtn = document.getElementById("modalRequestBtn");
-const modalPoster = document.getElementById("modalPoster");
-const modalTitle = document.getElementById("modalTitle");
-const modalDesc = document.getElementById("modalDesc");
-
-const ageModal = document.getElementById("ageModal");
-const ageYes = document.getElementById("ageYes");
-const ageNo = document.getElementById("ageNo");
-
-const toast = document.getElementById("toast");
-
-let activeTab = "BOLLYWOOD";
-let allMovies = [];
-let selectedMovie = null;
-let pendingAdultTab = false;
-
-function showToast(msg) {
-  toast.textContent = msg;
-  toast.classList.remove("hidden");
-  setTimeout(() => toast.classList.add("hidden"), 1800);
-}
-
-function openModal(modalEl) {
-  modalEl.classList.remove("hidden");
-}
-
-function closeModal(modalEl) {
-  modalEl.classList.add("hidden");
-}
-
-function normalizeCat(v) {
-  return (v || "").toUpperCase().trim();
-}
-
-function fuzzyMatch(name, q) {
-  if (!q) return true;
-  return (name || "").toLowerCase().includes(q.toLowerCase());
-}
-
-async function fetchMovies() {
-  // NOTE: Change table name if yours is different
-  const { data, error } = await supabase
-    .from("movies")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error(error);
-    showToast("Movies load failed ❌");
-    return;
+// ===============================
+// Drawer
+// ===============================
+function toggleDrawer(open) {
+  if (open) {
+    drawer.classList.add("open");
+    overlay.classList.add("open");
+  } else {
+    drawer.classList.remove("open");
+    overlay.classList.remove("open");
   }
+}
 
-  allMovies = data || [];
+window.toggleDrawer = toggleDrawer;
+
+// ===============================
+// Category
+// ===============================
+function setCategory(cat) {
+  currentCategory = cat;
+  toggleDrawer(false);
+
+  if (cat === "bollywood") activeCategoryPill.innerText = "BOLLYWOOD";
+  if (cat === "hollywood") activeCategoryPill.innerText = "HOLLYWOOD";
+  if (cat === "adult") activeCategoryPill.innerText = "ADULT / 18+";
+
+  applyFilters();
+}
+
+window.setCategory = setCategory;
+
+// ===============================
+// Filters
+// ===============================
+function applyFilters() {
+  const q = (searchInput.value || "").trim().toLowerCase();
+
+  filteredMovies = allMovies
+    .filter(m => (m.category || "").toLowerCase() === currentCategory)
+    .filter(m => !q || (m.title || "").toLowerCase().includes(q));
+
   renderMovies();
 }
 
+window.applyFilters = applyFilters;
+
+// ===============================
+// Render Movies
+// ===============================
 function renderMovies() {
-  const q = searchInput.value.trim();
-  const filtered = allMovies.filter((m) => {
-    const cat = normalizeCat(m.category);
-    return cat === activeTab && fuzzyMatch(m.name, q);
-  });
+  grid.innerHTML = "";
 
-  moviesGrid.innerHTML = "";
-
-  if (!filtered.length) {
-    emptyState.classList.remove("hidden");
+  if (!filteredMovies.length) {
+    emptyState.style.display = "block";
     return;
   }
 
-  emptyState.classList.add("hidden");
+  emptyState.style.display = "none";
 
-  filtered.forEach((m) => {
+  filteredMovies.forEach(movie => {
     const card = document.createElement("div");
-    card.className = "movieCard";
+    card.className = "poster";
+    card.onclick = () => openMovie(movie);
 
     const img = document.createElement("img");
-    img.src = m.poster_url || m.poster || "";
-    img.alt = m.name || "Movie";
+    img.src = movie.poster_url || "https://via.placeholder.com/500x700?text=Poster";
+    img.alt = movie.title || "Movie";
 
-    const overlay = document.createElement("div");
-    overlay.className = "movieOverlay";
-
-    const titleWrap = document.createElement("div");
     const title = document.createElement("div");
-    title.className = "movieTitle";
-    title.textContent = m.name || "Untitled";
-
-    const meta = document.createElement("div");
-    meta.className = "movieMeta";
-    meta.textContent = normalizeCat(m.category);
-
-    titleWrap.appendChild(title);
-    titleWrap.appendChild(meta);
-
-    overlay.appendChild(titleWrap);
+    title.className = "title";
+    title.innerText = movie.title || "Untitled";
 
     card.appendChild(img);
-    card.appendChild(overlay);
-
-    card.addEventListener("click", () => openMovie(m));
-    moviesGrid.appendChild(card);
+    card.appendChild(title);
+    grid.appendChild(card);
   });
 }
 
-function openMovie(m) {
-  selectedMovie = m;
-
-  modalPoster.src = m.poster_url || m.poster || "";
-  modalTitle.textContent = m.name || "";
-  modalDesc.textContent = m.description || "No description available.";
-
-  openModal(movieModal);
+// ===============================
+// Open Movie (Detail Screen)
+// ===============================
+function openMovie(movie) {
+  // movie.html page
+  const url = `movie.html?id=${encodeURIComponent(movie.id)}`;
+  window.location.href = url;
 }
 
-function resetRequestForm() {
-  requestForm.reset();
+window.openMovie = openMovie;
+
+// ===============================
+// Supabase Fetch Movies
+// ===============================
+async function fetchMovies() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${MOVIES_TABLE}?select=*`, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch movies");
+
+    allMovies = await res.json();
+    applyFilters();
+  } catch (e) {
+    console.error(e);
+    emptyState.style.display = "block";
+    emptyState.innerText = "Error loading movies.";
+  }
+}
+
+// ===============================
+// Request Modal
+// ===============================
+function openRequestModal() {
+  requestModal.classList.add("open");
+  reqMsg.innerText = "";
   reqMovieName.value = "";
-  reqNotes.value = "";
-  submitRequestBtn.disabled = false;
-  submitRequestBtn.textContent = "Send Request";
+  reqNote.value = "";
 }
 
-function openRequest(movieName = "") {
-  resetRequestForm();
-  if (movieName) reqMovieName.value = movieName;
-  openModal(requestModal);
+function closeRequestModal() {
+  requestModal.classList.remove("open");
+  reqMsg.innerText = "";
 }
 
-async function sendRequestToSupabase(payload) {
-  // NOTE: Change table name if yours is different
-  const { error } = await supabase.from("requests").insert([payload]);
-  if (error) throw error;
-}
+window.openRequestModal = openRequestModal;
+window.closeRequestModal = closeRequestModal;
 
-async function handleRequestSubmit(e) {
-  e.preventDefault();
+// ===============================
+// Submit Request (Supabase Insert)
+// ===============================
+async function submitRequest() {
+  const name = (reqMovieName.value || "").trim();
+  const note = (reqNote.value || "").trim();
 
-  const movie_name = reqMovieName.value.trim();
-  if (!movie_name) {
-    showToast("Movie name required ❌");
+  if (!name) {
+    reqMsg.innerText = "Movie name required ❌";
     return;
   }
 
-  try {
-    submitRequestBtn.disabled = true;
-    submitRequestBtn.textContent = "Sending...";
+  reqSendBtn.innerText = "Sending...";
+  reqSendBtn.disabled = true;
 
+  try {
     const payload = {
-      movie_name,
-      quality: reqQuality.value,
-      language: reqLanguage.value,
-      notes: reqNotes.value.trim(),
-      category: activeTab,
-      source: "web",
-      created_at: new Date().toISOString(),
+      movie_name: name,
+      user_note: note,
     };
 
-    await sendRequestToSupabase(payload);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${REQUESTS_TABLE}`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(payload),
+    });
 
-    showToast("Request sent ✅");
-    closeModal(requestModal);
-    resetRequestForm();
-  } catch (err) {
-    console.error(err);
-    submitRequestBtn.disabled = false;
-    submitRequestBtn.textContent = "Send Request";
-    showToast("Request failed ❌");
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(t);
+    }
+
+    reqMsg.innerText = "Request sent successfully ✅";
+    reqSendBtn.innerText = "Send Request";
+    reqSendBtn.disabled = false;
+
+    setTimeout(() => {
+      closeRequestModal();
+    }, 900);
+
+  } catch (e) {
+    console.error(e);
+    reqMsg.innerText = "Failed to send request ❌ (RLS / Network)";
+    reqSendBtn.innerText = "Send Request";
+    reqSendBtn.disabled = false;
   }
 }
 
-/* Tabs */
-document.querySelectorAll(".tab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const tab = btn.dataset.tab;
+window.submitRequest = submitRequest;
 
-    // Adult tab -> show age confirm
-    if (tab === "ADULT") {
-      pendingAdultTab = true;
-      openModal(ageModal);
-      return;
-    }
-
-    pendingAdultTab = false;
-    activeTab = tab;
-
-    document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    renderMovies();
-  });
-});
-
-/* Age confirm */
-ageYes.addEventListener("click", () => {
-  closeModal(ageModal);
-
-  activeTab = "ADULT";
-  document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
-  document.querySelector('.tab[data-tab="ADULT"]').classList.add("active");
-
-  renderMovies();
-});
-
-ageNo.addEventListener("click", () => {
-  closeModal(ageModal);
-  pendingAdultTab = false;
-
-  // go back to Bollywood
-  activeTab = "BOLLYWOOD";
-  document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
-  document.querySelector('.tab[data-tab="BOLLYWOOD"]').classList.add("active");
-
-  renderMovies();
-});
-
-/* Search */
-searchInput.addEventListener("input", () => renderMovies());
-
-/* Request modal open/close */
-openRequestBtn.addEventListener("click", () => openRequest());
-closeRequestModal.addEventListener("click", () => {
-  closeModal(requestModal);
-  resetRequestForm();
-});
-cancelRequestBtn.addEventListener("click", () => {
-  closeModal(requestModal);
-  resetRequestForm();
-});
-
-/* Request form submit */
-requestForm.addEventListener("submit", handleRequestSubmit);
-
-/* Movie modal close */
-closeMovieModal.addEventListener("click", () => closeModal(movieModal));
-modalCloseBtn.addEventListener("click", () => closeModal(movieModal));
-
-/* Movie modal request */
-modalRequestBtn.addEventListener("click", () => {
-  if (!selectedMovie) return;
-  closeModal(movieModal);
-  openRequest(selectedMovie.name || "");
-});
-
-/* Click outside modal close */
-movieModal.addEventListener("click", (e) => {
-  if (e.target === movieModal) closeModal(movieModal);
-});
-requestModal.addEventListener("click", (e) => {
-  if (e.target === requestModal) {
-    closeModal(requestModal);
-    resetRequestForm();
-  }
-});
-ageModal.addEventListener("click", (e) => {
-  if (e.target === ageModal) closeModal(ageModal);
-});
-
-/* Init */
+// ===============================
+// Init
+// ===============================
 fetchMovies();
+setCategory("bollywood");
