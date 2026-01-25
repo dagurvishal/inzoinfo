@@ -1,583 +1,553 @@
-/* =========================
-   INZO WORLD - app.js
-   FULL UPDATED WORKING
-========================= */
-
-// ====== SUPABASE (Movies + Upload only) ======
+/***********************
+  CONFIG
+************************/
 const SUPABASE_URL = "https://ehnkxlccztcjqznuwtto.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVobmt4bGNjenRjanF6bnV3dHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNzEyMjcsImV4cCI6MjA4NDY0NzIyN30.EnG1ThOcPNj3mdzrTY-fwDwy5nsEW1GdOqLYgnIbthc";
 
-// ====== TELEGRAM REQUEST WORKER (Direct) ======
+// Request Worker URL (Telegram)
 const REQUEST_API_URL = "https://inzoworld-request.dagurvishal2049.workers.dev/";
 
-// ====== UPLOAD PASSCODE SETTINGS ======
-const UPLOAD_PASSCODE = "0001";
-const MAX_TRIES = 3;
+const POSTERS_BUCKET = "posters";
 
-// ====== STORAGE BUCKET ======
-const POSTER_BUCKET = "posters";
-
-// ============================
-// Helpers
-// ============================
-function $(id) {
-  return document.getElementById(id);
-}
-
-function safeText(v) {
-  return (v ?? "").toString().trim();
-}
-
-function nowISO() {
-  return new Date().toISOString();
-}
-
-function getDeviceId() {
-  // permanent id per device/browser
-  let id = localStorage.getItem("inzoworld_device_id");
-  if (!id) {
-    id = crypto.randomUUID ? crypto.randomUUID() : "dev_" + Math.random().toString(16).slice(2);
-    localStorage.setItem("inzoworld_device_id", id);
-  }
-  return id;
-}
-
-function getUploadBlockStatus() {
-  return localStorage.getItem("inzoworld_upload_blocked") === "1";
-}
-
-function setUploadBlocked() {
-  localStorage.setItem("inzoworld_upload_blocked", "1");
-}
-
-function getTriesLeft() {
-  const used = Number(localStorage.getItem("inzoworld_pass_tries_used") || "0");
-  return Math.max(0, MAX_TRIES - used);
-}
-
-function increaseTryUsed() {
-  const used = Number(localStorage.getItem("inzoworld_pass_tries_used") || "0");
-  localStorage.setItem("inzoworld_pass_tries_used", String(used + 1));
-}
-
-function resetTries() {
-  localStorage.setItem("inzoworld_pass_tries_used", "0");
-}
-
-function setUploadUnlocked() {
-  localStorage.setItem("inzoworld_upload_unlocked", "1");
-}
-
-function isUploadUnlocked() {
-  return localStorage.getItem("inzoworld_upload_unlocked") === "1";
-}
-
-function lockUpload() {
-  localStorage.removeItem("inzoworld_upload_unlocked");
-}
-
-async function supabaseFetch(path, options = {}) {
+/***********************
+  Supabase REST helper
+************************/
+async function sbFetch(path, options = {}) {
   const res = await fetch(`${SUPABASE_URL}${path}`, {
     ...options,
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+      ...(options.headers || {})
+    }
   });
 
   const text = await res.text();
   let data = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
-  }
+  try { data = JSON.parse(text); } catch { data = text; }
 
   if (!res.ok) {
+    console.log("Supabase error:", res.status, data);
     throw new Error(typeof data === "string" ? data : JSON.stringify(data));
   }
   return data;
 }
 
-async function supabaseStorageUpload(file, filename) {
-  const url = `${SUPABASE_URL}/storage/v1/object/${POSTER_BUCKET}/${filename}`;
+async function supabaseSelectMovies() {
+  return await sbFetch(`/rest/v1/movies?select=*&order=created_at.desc`);
+}
 
-  const res = await fetch(url, {
+async function supabaseInsertMovie(movie) {
+  return await sbFetch(`/rest/v1/movies`, {
     method: "POST",
     headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      "x-upsert": "true",
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
     },
-    body: file,
+    body: JSON.stringify(movie)
+  });
+}
+
+/***********************
+  Storage Upload
+************************/
+async function uploadToBucket(bucketName, file) {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const safeName = `${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;
+  const filePath = safeName;
+
+  await sbFetch(`/storage/v1/object/${bucketName}/${filePath}`, {
+    method: "POST",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file
   });
 
-  const text = await res.text();
-  let data = null;
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${filePath}`;
+}
+
+/***********************
+  Helpers
+************************/
+function normalizeText(s) {
+  return (s || "").toLowerCase().replace(/\s+/g, "").trim();
+}
+
+function fuzzyMatch(name, query) {
+  const a = normalizeText(name);
+  const b = normalizeText(query);
+  if (!b) return true;
+  if (a.includes(b)) return true;
+
+  let i = 0, j = 0, match = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { match++; j++; }
+    i++;
+  }
+  return match >= Math.max(3, Math.floor(b.length * 0.6));
+}
+
+function toYouTubeEmbed(url) {
+  if (!url) return "";
+  let id = "";
   try {
-    data = text ? JSON.parse(text) : null;
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) id = u.pathname.replace("/", "");
+    else id = u.searchParams.get("v") || "";
+  } catch { return ""; }
+  return id ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=0` : "";
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
   } catch {
-    data = text;
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+    return true;
+  }
+}
+
+/***********************
+  DOM refs
+************************/
+const grid = document.getElementById("moviesGrid");
+const skeletonGrid = document.getElementById("skeletonGrid");
+const emptyState = document.getElementById("emptyState");
+
+const searchInput = document.getElementById("searchInput");
+const suggestions = document.getElementById("suggestions");
+
+// Menu
+const menuBtn = document.getElementById("menuBtn");
+const sideMenuOverlay = document.getElementById("sideMenuOverlay");
+const closeMenuBtn = document.getElementById("closeMenuBtn");
+
+const menuItems = document.querySelectorAll(".menuItem");
+const tabBtns = document.querySelectorAll(".tabBtn");
+
+// Movie modal
+const modalOverlay = document.getElementById("modalOverlay");
+const closeModal = document.getElementById("closeModal");
+const modalTitle = document.getElementById("modalTitle");
+const modalPosterBg = document.getElementById("modalPosterBg");
+const trailerTapArea = document.getElementById("trailerTapArea");
+
+const shareBtn = document.getElementById("shareBtn");
+const downloadBtn = document.getElementById("downloadBtn");
+
+// Trailer overlay
+const trailerOverlay = document.getElementById("trailerOverlay");
+const closeTrailer = document.getElementById("closeTrailer");
+const trailerFrame = document.getElementById("trailerFrame");
+const trailerTitle = document.getElementById("trailerTitle");
+
+// Adult overlay
+const adultOverlay = document.getElementById("adultOverlay");
+const adultCancel = document.getElementById("adultCancel");
+const adultContinue = document.getElementById("adultContinue");
+
+// Upload overlay
+const uploadOverlay = document.getElementById("uploadOverlay");
+const closeUpload = document.getElementById("closeUpload");
+const cancelUploadBtn = document.getElementById("cancelUploadBtn");
+const uploadBtn = document.getElementById("uploadBtn");
+const uploadStatus = document.getElementById("uploadStatus");
+
+// Request overlay
+const requestOverlay = document.getElementById("requestOverlay");
+const closeRequest = document.getElementById("closeRequest");
+const cancelRequestBtn = document.getElementById("cancelRequestBtn");
+const sendRequestBtn = document.getElementById("sendRequestBtn");
+const reqStatus = document.getElementById("reqStatus");
+
+/***********************
+  State
+************************/
+let allMovies = [];
+let activeTab = "BOLLYWOOD";
+let selectedMovie = null;
+
+/***********************
+  UI helpers
+************************/
+function showSkeleton() {
+  if (!skeletonGrid) return;
+  skeletonGrid.innerHTML = "";
+  for (let i = 0; i < 4; i++) {
+    const box = document.createElement("div");
+    box.className = "movieCard";
+    box.style.height = "220px";
+    box.style.opacity = "0.35";
+    skeletonGrid.appendChild(box);
+  }
+}
+
+function hideSkeleton() {
+  if (!skeletonGrid) return;
+  skeletonGrid.innerHTML = "";
+}
+
+function renderSuggestions(query) {
+  if (!suggestions) return;
+
+  const q = query.trim();
+  if (!q) {
+    suggestions.classList.add("hidden");
+    suggestions.innerHTML = "";
+    return;
   }
 
-  if (!res.ok) throw new Error(typeof data === "string" ? data : JSON.stringify(data));
-  return data;
-}
+  const matches = allMovies
+    .filter(m => fuzzyMatch(m.name, q))
+    .slice(0, 6);
 
-function supabasePublicUrl(path) {
-  return `${SUPABASE_URL}/storage/v1/object/public/${POSTER_BUCKET}/${path}`;
-}
+  if (matches.length === 0) {
+    suggestions.classList.add("hidden");
+    suggestions.innerHTML = "";
+    return;
+  }
 
-// ============================
-// UI: Modal + Drawer
-// ============================
-function openModal(id) {
-  const el = $(id);
-  if (!el) return;
-  el.classList.add("show");
-  document.body.classList.add("no-scroll");
-}
+  suggestions.innerHTML = "";
+  matches.forEach(m => {
+    const item = document.createElement("div");
+    item.className = "suggItem";
+    item.innerHTML = `<div class="suggName">${m.name}</div>`;
+    item.addEventListener("click", () => {
+      searchInput.value = m.name;
+      suggestions.classList.add("hidden");
+      renderMovies();
+      openMovie(m);
+    });
+    suggestions.appendChild(item);
+  });
 
-function closeModal(id) {
-  const el = $(id);
-  if (!el) return;
-  el.classList.remove("show");
-  document.body.classList.remove("no-scroll");
-}
-
-function openDrawer() {
-  const drawer = $("drawer");
-  const overlay = $("drawerOverlay");
-  if (drawer) drawer.classList.add("open");
-  if (overlay) overlay.classList.add("show");
-}
-
-function closeDrawer() {
-  const drawer = $("drawer");
-  const overlay = $("drawerOverlay");
-  if (drawer) drawer.classList.remove("open");
-  if (overlay) overlay.classList.remove("show");
-}
-
-// ============================
-// Movies: Fetch + Render
-// ============================
-let currentCategory = "bollywood";
-let allMovies = [];
-
-function getCategoryLabel(cat) {
-  if (cat === "bollywood") return "Bollywood";
-  if (cat === "hollywood") return "Hollywood";
-  if (cat === "adult") return "18+ Adult";
-  return "Movies";
-}
-
-function normalizeCategory(cat) {
-  const c = safeText(cat).toLowerCase();
-  if (c.includes("bolly")) return "bollywood";
-  if (c.includes("holly")) return "hollywood";
-  if (c.includes("adult") || c.includes("18")) return "adult";
-  return "bollywood";
-}
-
-async function loadMovies() {
-  // Movies table: id, title, category, poster_url, year, created_at
-  const data = await supabaseFetch(
-    `/rest/v1/movies?select=*&order=created_at.desc`,
-    { method: "GET" }
-  );
-
-  allMovies = Array.isArray(data) ? data : [];
-  renderMovies();
+  suggestions.classList.remove("hidden");
 }
 
 function renderMovies() {
-  const list = $("movieList");
-  const empty = $("emptyState");
-  if (!list) return;
+  if (!grid) return;
 
-  const q = safeText($("searchInput")?.value).toLowerCase();
-
-  const filtered = allMovies.filter((m) => {
-    const cat = normalizeCategory(m.category);
-    const matchCat = cat === currentCategory;
-    const matchSearch = !q || safeText(m.title).toLowerCase().includes(q);
-    return matchCat && matchSearch;
+  const q = searchInput ? searchInput.value.trim() : "";
+  const filtered = allMovies.filter(m => {
+    return m.category === activeTab && fuzzyMatch(m.name, q);
   });
 
-  list.innerHTML = "";
+  grid.innerHTML = "";
 
-  if (!filtered.length) {
-    if (empty) empty.style.display = "block";
+  if (filtered.length === 0) {
+    emptyState.classList.remove("hidden");
     return;
-  } else {
-    if (empty) empty.style.display = "none";
   }
+  emptyState.classList.add("hidden");
 
-  filtered.forEach((m) => {
+  filtered.forEach(movie => {
     const card = document.createElement("div");
-    card.className = "movie-card";
-
-    const poster = document.createElement("img");
-    poster.className = "movie-poster";
-    poster.alt = safeText(m.title) || "Movie";
-    poster.loading = "lazy";
-    poster.src = m.poster_url || "wallpaper.jpg";
-
-    const info = document.createElement("div");
-    info.className = "movie-info";
-
-    const title = document.createElement("div");
-    title.className = "movie-title";
-    title.textContent = safeText(m.title) || "Untitled";
-
-    const meta = document.createElement("div");
-    meta.className = "movie-meta";
-    meta.textContent = `${getCategoryLabel(normalizeCategory(m.category))}${m.year ? " • " + m.year : ""}`;
-
-    info.appendChild(title);
-    info.appendChild(meta);
-
-    card.appendChild(poster);
-    card.appendChild(info);
-
-    card.addEventListener("click", () => {
-      // Open movie detail page
-      localStorage.setItem("inzoworld_selected_movie", JSON.stringify(m));
-      window.location.href = "movie.html";
-    });
-
-    list.appendChild(card);
+    card.className = "movieCard";
+    card.innerHTML = `
+      <img src="${movie.poster_url || ""}" alt="${movie.name}" />
+      <div class="movieOverlay">
+        <div class="movieTitle">${movie.name}</div>
+      </div>
+    `;
+    card.addEventListener("click", () => openMovie(movie));
+    grid.appendChild(card);
   });
 }
 
-// ============================
-// Adult Confirm Screen
-// ============================
-function showAdultConfirm() {
-  openModal("adultModal");
+function closeMovieModal() {
+  modalOverlay.classList.add("hidden");
+  selectedMovie = null;
 }
 
-function hideAdultConfirm() {
-  closeModal("adultModal");
-}
+function openMovie(movie) {
+  selectedMovie = movie;
 
-function isAdultAllowed() {
-  return localStorage.getItem("inzoworld_adult_allowed") === "1";
-}
+  modalTitle.textContent = movie.name || "Movie";
+  if (modalPosterBg) modalPosterBg.style.backgroundImage = `url('${movie.poster_url || ""}')`;
 
-function setAdultAllowed() {
-  localStorage.setItem("inzoworld_adult_allowed", "1");
-}
-
-// ============================
-// Request System (Direct Worker)
-// ============================
-async function sendRequestToTelegram({ movieName, note, posterFile }) {
-  const payload = {
-    movie: safeText(movieName),
-    message: safeText(note),
-    url: window.location.origin,
-    from: getDeviceId(),
-    time: new Date().toLocaleString(),
-  };
-
-  // If screenshot/poster file exists => send base64 to worker
-  if (posterFile) {
-    const base64 = await fileToBase64(posterFile);
-    payload.poster_base64 = base64; // Worker will send photo to Telegram
+  // download button state
+  const dl = (movie.download_url || movie.download_link || movie.download || movie.download_720 || "").trim?.() || movie.download_720 || movie.download_480 || "";
+  if (dl && dl.length > 5) {
+    downloadBtn.disabled = false;
+    downloadBtn.onclick = () => window.open(dl, "_blank");
+  } else {
+    downloadBtn.disabled = true;
+    downloadBtn.onclick = null;
   }
+
+  modalOverlay.classList.remove("hidden");
+}
+
+/***********************
+  Data load
+************************/
+async function loadMoviesFromSupabase() {
+  showSkeleton();
+  try {
+    allMovies = await supabaseSelectMovies();
+    hideSkeleton();
+    renderMovies();
+  } catch (e) {
+    hideSkeleton();
+    console.log("Error loading movies:", e);
+  }
+}
+
+/***********************
+  Request (Telegram Worker)
+************************/
+async function sendRequestToTelegram({ movieName, movieUrl, photoBase64 }) {
+  const payload = {
+    movieName,
+    movieUrl,
+    photoBase64: photoBase64 || null,
+    source: "inzoworld"
+  };
 
   const res = await fetch(REQUEST_API_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload)
   });
 
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
-    throw new Error(data?.error || "Request failed");
-  }
-  return data;
+  return await res.json();
 }
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result); // data:image/...;base64,...
+    reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-// ============================
-// Upload Movie (Protected by passcode)
-// ============================
-async function uploadMovieFlow() {
-  if (getUploadBlockStatus()) {
-    alert("❌ Upload blocked permanently on this device.");
-    return;
-  }
+/***********************
+  Init
+************************/
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadMoviesFromSupabase();
 
-  if (!isUploadUnlocked()) {
-    openModal("passModal");
-    return;
-  }
-
-  openModal("uploadModal");
-}
-
-async function submitUploadMovie() {
-  const title = safeText($("uploadTitle")?.value);
-  const year = safeText($("uploadYear")?.value);
-  const category = safeText($("uploadCategory")?.value || "bollywood");
-  const posterFile = $("uploadPoster")?.files?.[0];
-
-  if (!title) {
-    alert("Movie name required");
-    return;
-  }
-  if (!posterFile) {
-    alert("Poster required");
-    return;
-  }
-
-  // Upload poster to Supabase Storage
-  const filename = `poster_${Date.now()}_${posterFile.name}`.replace(/\s+/g, "_");
-  await supabaseStorageUpload(posterFile, filename);
-  const poster_url = supabasePublicUrl(filename);
-
-  // Insert movie row
-  const movieRow = {
-    title,
-    year: year ? Number(year) : null,
-    category,
-    poster_url,
-    created_at: nowISO(),
-  };
-
-  await supabaseFetch(`/rest/v1/movies`, {
-    method: "POST",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify(movieRow),
+  // Search
+  searchInput.addEventListener("input", () => {
+    renderSuggestions(searchInput.value);
+    renderMovies();
   });
 
-  closeModal("uploadModal");
-  $("uploadTitle").value = "";
-  $("uploadYear").value = "";
-  $("uploadPoster").value = "";
-
-  alert("✅ Movie uploaded!");
-  await loadMovies();
-}
-
-// ============================
-// Init + Events
-// ============================
-function setActiveTab(cat) {
-  currentCategory = cat;
-
-  const btnB = $("tabBollywood");
-  const btnH = $("tabHollywood");
-  const btnA = $("tabAdult");
-
-  [btnB, btnH, btnA].forEach((b) => b && b.classList.remove("active"));
-
-  if (cat === "bollywood" && btnB) btnB.classList.add("active");
-  if (cat === "hollywood" && btnH) btnH.classList.add("active");
-  if (cat === "adult" && btnA) btnA.classList.add("active");
-
-  renderMovies();
-}
-
-function initHeader() {
-  // Menu button (header)
-  $("menuBtn")?.addEventListener("click", () => {
-    openDrawer();
-  });
-
-  // Drawer close
-  $("drawerClose")?.addEventListener("click", closeDrawer);
-  $("drawerOverlay")?.addEventListener("click", closeDrawer);
-
-  // Search input
-  $("searchInput")?.addEventListener("input", renderMovies);
-}
-
-function initTabs() {
-  $("tabBollywood")?.addEventListener("click", () => setActiveTab("bollywood"));
-  $("tabHollywood")?.addEventListener("click", () => setActiveTab("hollywood"));
-
-  $("tabAdult")?.addEventListener("click", () => {
-    if (!isAdultAllowed()) {
-      showAdultConfirm();
-      return;
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".searchWrap")) {
+      suggestions.classList.add("hidden");
     }
-    setActiveTab("adult");
   });
 
-  // Adult confirm buttons
-  $("adultYes")?.addEventListener("click", () => {
-    setAdultAllowed();
-    hideAdultConfirm();
-    setActiveTab("adult");
+  // Menu open/close
+  menuBtn.addEventListener("click", () => {
+    sideMenuOverlay.classList.remove("hidden");
+  });
+  closeMenuBtn.addEventListener("click", () => {
+    sideMenuOverlay.classList.add("hidden");
+  });
+  sideMenuOverlay.addEventListener("click", (e) => {
+    if (e.target === sideMenuOverlay) sideMenuOverlay.classList.add("hidden");
   });
 
-  $("adultNo")?.addEventListener("click", () => {
-    hideAdultConfirm();
-  });
-}
+  // Home / Upload / Request
+  menuItems.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const page = btn.dataset.menu;
+      menuItems.forEach(x => x.classList.remove("active"));
+      btn.classList.add("active");
 
-function initDrawerMenu() {
-  // Drawer options: Bollywood / Hollywood / 18+ / Movies List / Request / Upload
-  $("menuBollywood")?.addEventListener("click", () => {
-    closeDrawer();
-    setActiveTab("bollywood");
-  });
+      if (page === "upload") uploadOverlay.classList.remove("hidden");
+      if (page === "request") requestOverlay.classList.remove("hidden");
 
-  $("menuHollywood")?.addEventListener("click", () => {
-    closeDrawer();
-    setActiveTab("hollywood");
-  });
+      if (page === "home") {
+        uploadOverlay.classList.add("hidden");
+        requestOverlay.classList.add("hidden");
+      }
 
-  $("menuAdult")?.addEventListener("click", () => {
-    closeDrawer();
-    if (!isAdultAllowed()) {
-      showAdultConfirm();
-      return;
-    }
-    setActiveTab("adult");
+      sideMenuOverlay.classList.add("hidden");
+    });
   });
 
-  $("menuRequest")?.addEventListener("click", () => {
-    closeDrawer();
-    openModal("requestModal");
-  });
+  // Category tabs inside menu
+  tabBtns.forEach(t => {
+    t.addEventListener("click", () => {
+      const tab = t.dataset.tab;
 
-  $("menuUpload")?.addEventListener("click", async () => {
-    closeDrawer();
-    await uploadMovieFlow();
-  });
-}
-
-function initRequestModal() {
-  $("openRequestBtn")?.addEventListener("click", () => openModal("requestModal"));
-  $("requestClose")?.addEventListener("click", () => closeModal("requestModal"));
-  $("requestCancel")?.addEventListener("click", () => closeModal("requestModal"));
-
-  $("sendRequest")?.addEventListener("click", async () => {
-    try {
-      $("sendRequest").disabled = true;
-      $("sendRequest").textContent = "Sending...";
-
-      const movieName = safeText($("reqMovie")?.value);
-      const note = safeText($("reqNote")?.value);
-      const posterFile = $("reqPoster")?.files?.[0] || null;
-
-      if (!movieName) {
-        alert("Movie Name required");
+      if (tab === "ADULT") {
+        adultOverlay.classList.remove("hidden");
         return;
       }
 
-      await sendRequestToTelegram({ movieName, note, posterFile });
+      tabBtns.forEach(x => x.classList.remove("active"));
+      t.classList.add("active");
+      activeTab = tab;
+      renderMovies();
+      sideMenuOverlay.classList.add("hidden");
+    });
+  });
 
-      $("reqMovie").value = "";
-      $("reqNote").value = "";
-      $("reqPoster").value = "";
+  // Adult confirm
+  adultCancel.addEventListener("click", () => adultOverlay.classList.add("hidden"));
+  adultContinue.addEventListener("click", () => {
+    adultOverlay.classList.add("hidden");
+    tabBtns.forEach(x => x.classList.remove("active"));
+    document.querySelector(`.tabBtn[data-tab="ADULT"]`).classList.add("active");
+    activeTab = "ADULT";
+    renderMovies();
+    sideMenuOverlay.classList.add("hidden");
+  });
 
-      closeModal("requestModal");
-      alert("✅ Request sent to Telegram!");
-    } catch (e) {
-      alert("❌ Request failed. Check Worker/Network.");
-      console.error(e);
-    } finally {
-      $("sendRequest").disabled = false;
-      $("sendRequest").textContent = "Send Request";
+  // Movie modal close
+  closeModal.addEventListener("click", closeMovieModal);
+  modalOverlay.addEventListener("click", (e) => {
+    if (e.target === modalOverlay) closeMovieModal();
+  });
+
+  // Trailer tap => open trailer overlay
+  trailerTapArea.addEventListener("click", () => {
+    if (!selectedMovie) return;
+    const embed = toYouTubeEmbed(selectedMovie.trailer_url || "");
+    if (!embed) return alert("Trailer link not available ❌");
+
+    trailerTitle.textContent = selectedMovie.name || "Trailer";
+    trailerFrame.src = embed;
+    trailerOverlay.classList.remove("hidden");
+  });
+
+  closeTrailer.addEventListener("click", () => {
+    trailerOverlay.classList.add("hidden");
+    trailerFrame.src = "";
+  });
+  trailerOverlay.addEventListener("click", (e) => {
+    if (e.target === trailerOverlay) {
+      trailerOverlay.classList.add("hidden");
+      trailerFrame.src = "";
     }
   });
-}
 
-function initPasscodeModal() {
-  $("passClose")?.addEventListener("click", () => closeModal("passModal"));
-  $("passCancel")?.addEventListener("click", () => closeModal("passModal"));
+  // Share
+  shareBtn.addEventListener("click", async () => {
+    if (!selectedMovie) return;
 
-  $("passSubmit")?.addEventListener("click", () => {
-    if (getUploadBlockStatus()) {
-      alert("❌ Upload blocked permanently on this device.");
-      closeModal("passModal");
-      return;
-    }
+    const trailer = selectedMovie.trailer_url || "";
+    const dl = selectedMovie.download_url || selectedMovie.download_720 || "";
+    const text =
+`🎬 ${selectedMovie.name}
 
-    const code = safeText($("passInput")?.value);
+▶ Trailer: ${trailer || "N/A"}
+⬇ Download: ${dl || "N/A"}`;
 
-    if (!code) {
-      alert("Enter passcode");
-      return;
-    }
+    await copyToClipboard(text);
 
-    if (code === UPLOAD_PASSCODE) {
-      setUploadUnlocked();
-      resetTries();
-      $("passInput").value = "";
-      closeModal("passModal");
-      openModal("uploadModal");
-      return;
-    }
-
-    // wrong
-    increaseTryUsed();
-    const left = getTriesLeft();
-
-    if (left <= 0) {
-      setUploadBlocked();
-      closeModal("passModal");
-      alert("❌ Upload blocked permanently (3 wrong tries).");
-      return;
-    }
-
-    alert(`❌ Wrong passcode. Tries left: ${left}`);
+    // WhatsApp forward
+    const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(wa, "_blank");
   });
-}
 
-function initUploadModal() {
-  $("uploadClose")?.addEventListener("click", () => closeModal("uploadModal"));
-  $("uploadCancel")?.addEventListener("click", () => closeModal("uploadModal"));
-  $("uploadSubmit")?.addEventListener("click", async () => {
+  // Upload close
+  closeUpload.addEventListener("click", () => uploadOverlay.classList.add("hidden"));
+  cancelUploadBtn.addEventListener("click", () => uploadOverlay.classList.add("hidden"));
+
+  // Upload submit
+  uploadBtn.addEventListener("click", async () => {
+    const name = document.getElementById("upName").value.trim();
+    const category = document.getElementById("upCategory").value;
+    const posterFile = document.getElementById("upPoster").files[0];
+    const trailer_url = document.getElementById("upTrailer").value.trim();
+    const download_720 = document.getElementById("upDownload").value.trim();
+
+    if (!name || !category || !posterFile || !trailer_url || !download_720) {
+      alert("All fields required ❌");
+      return;
+    }
+
     try {
-      $("uploadSubmit").disabled = true;
-      $("uploadSubmit").textContent = "Uploading...";
-      await submitUploadMovie();
+      uploadBtn.disabled = true;
+      uploadStatus.textContent = "Uploading banner...";
+
+      const poster_url = await uploadToBucket(POSTERS_BUCKET, posterFile);
+
+      uploadStatus.textContent = "Saving movie...";
+      await supabaseInsertMovie({
+        name,
+        category,
+        poster_url,
+        trailer_url,
+        download_720
+      });
+
+      uploadStatus.textContent = "Uploaded ✅";
+      alert("Movie uploaded ✅");
+
+      document.getElementById("upName").value = "";
+      document.getElementById("upTrailer").value = "";
+      document.getElementById("upDownload").value = "";
+      document.getElementById("upPoster").value = "";
+
+      await loadMoviesFromSupabase();
+      uploadOverlay.classList.add("hidden");
     } catch (e) {
-      console.error(e);
-      alert("❌ Upload failed (Storage/RLS). Check policies.");
+      console.log(e);
+      uploadStatus.textContent = "Upload failed ❌ (RLS/Storage)";
+      alert("Upload failed ❌");
     } finally {
-      $("uploadSubmit").disabled = false;
-      $("uploadSubmit").textContent = "Upload Movie";
+      uploadBtn.disabled = false;
     }
   });
-}
 
-async function init() {
-  initHeader();
-  initTabs();
-  initDrawerMenu();
-  initRequestModal();
-  initPasscodeModal();
-  initUploadModal();
+  // Request close
+  closeRequest.addEventListener("click", () => requestOverlay.classList.add("hidden"));
+  cancelRequestBtn.addEventListener("click", () => requestOverlay.classList.add("hidden"));
 
-  // Default category
-  setActiveTab("bollywood");
+  // Request submit => Telegram worker
+  sendRequestBtn.addEventListener("click", async () => {
+    const movieName = document.getElementById("reqMovieName").value.trim();
+    const movieUrl = document.getElementById("reqMovieUrl").value.trim();
+    const reqFile = document.getElementById("reqPhotoFile").files[0];
 
-  // Load movies
-  try {
-    await loadMovies();
-  } catch (e) {
-    console.error(e);
-    // Not showing error text in UI (premium look)
-  }
-}
+    if (!movieName) {
+      alert("Movie name required ❌");
+      return;
+    }
 
-document.addEventListener("DOMContentLoaded", init);
+    try {
+      sendRequestBtn.disabled = true;
+      reqStatus.textContent = "Sending request...";
+
+      let photoBase64 = null;
+      if (reqFile) {
+        photoBase64 = await fileToBase64(reqFile);
+      }
+
+      const result = await sendRequestToTelegram({
+        movieName,
+        movieUrl,
+        photoBase64
+      });
+
+      console.log("Request result:", result);
+
+      reqStatus.textContent = "Request sent ✅";
+      alert("Request sent ✅");
+
+      document.getElementById("reqMovieName").value = "";
+      document.getElementById("reqMovieUrl").value = "";
+      document.getElementById("reqPhotoFile").value = "";
+
+      requestOverlay.classList.add("hidden");
+    } catch (e) {
+      console.log(e);
+      reqStatus.textContent = "Failed to send request ❌";
+      alert("Failed to send request ❌");
+    } finally {
+      sendRequestBtn.disabled = false;
+    }
+  });
+});
