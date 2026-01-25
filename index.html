@@ -9,19 +9,21 @@
 
 <body>
 
-  <!-- Wallpaper -->
+  <!-- Background Wallpaper -->
   <div class="wallpaper"></div>
   <div class="wallpaperBlur"></div>
 
-  <!-- Top Header -->
-  <header class="topHeader">
-    <div class="brandCenter">
-      <div class="brandLogo">INZO <span>WORLD</span></div>
-      <div class="brandSub">Premium Movie Hub</div>
+  <!-- HEADER -->
+  <header class="topbar">
+    <!-- Center Logo -->
+    <div class="logoCenter">
+      <div class="logoText">INZO <span>WORLD</span></div>
+      <div class="logoLine"></div>
     </div>
 
-    <div class="topRow">
-      <button id="menuBtn" class="iconBtn" aria-label="Menu">☰</button>
+    <!-- Menu + Search Row -->
+    <div class="headerRow">
+      <button id="menuBtn" class="menuBtn">☰</button>
 
       <div class="searchWrap">
         <div class="searchBox">
@@ -33,49 +35,42 @@
     </div>
   </header>
 
-  <!-- Side Drawer Menu -->
-  <div id="drawerOverlay" class="drawerOverlay hidden"></div>
-  <aside id="drawer" class="drawer hidden">
-    <div class="drawerHeader">
-      <div class="drawerTitle">INZO WORLD</div>
-      <button id="closeDrawer" class="iconBtn">✕</button>
-    </div>
+  <!-- SIDE MENU -->
+  <div id="sideMenuOverlay" class="sideMenuOverlay hidden">
+    <div class="sideMenu">
+      <div class="sideMenuTop">
+        <div class="sideMenuTitle">INZO WORLD</div>
+        <button id="closeMenuBtn" class="closeMenuBtn">✕</button>
+      </div>
 
-    <div class="drawerSection">
-      <div class="drawerLabel">Categories</div>
-      <button class="drawerItem tab active" data-tab="BOLLYWOOD">Bollywood</button>
-      <button class="drawerItem tab" data-tab="HOLLYWOOD">Hollywood</button>
-      <button class="drawerItem tab" data-tab="ADULT">18+</button>
-    </div>
+      <div class="menuSection">
+        <button class="menuItem active" data-menu="home">🏠 Home</button>
+        <button class="menuItem" data-menu="upload">⬆ Upload</button>
+        <button class="menuItem" data-menu="request">📩 Request</button>
+      </div>
 
-    <div class="drawerSection">
-      <div class="drawerLabel">Actions</div>
-      <button id="openUpload" class="drawerItem">⬆ Upload Movie</button>
-      <button id="openRequest" class="drawerItem">＋ Request Movie</button>
-    </div>
+      <div class="menuDivider"></div>
 
-    <div class="drawerFooter">
-      <div class="mutedSmall">Powered by INZO WORLD</div>
+      <div class="menuSection">
+        <div class="menuLabel">Categories</div>
+        <button class="menuItem tabBtn active" data-tab="BOLLYWOOD">🎬 Bollywood</button>
+        <button class="menuItem tabBtn" data-tab="HOLLYWOOD">🍿 Hollywood</button>
+        <button class="menuItem tabBtn" data-tab="ADULT">🔞 18+</button>
+      </div>
     </div>
-  </aside>
+  </div>
 
-  <!-- Main Content -->
+  <!-- MAIN -->
   <main class="container">
-
-    <div class="sectionHead">
-      <h3 id="activeCatTitle">Bollywood</h3>
-      <span class="chip">Movies</span>
-    </div>
-
-    <div id="skeletonGrid" class="list"></div>
-    <div id="moviesGrid" class="list"></div>
+    <div id="skeletonGrid" class="grid"></div>
+    <div id="moviesGrid" class="grid"></div>
 
     <div id="emptyState" class="emptyState hidden">
       No movies found.
     </div>
   </main>
 
-  <!-- Movie Popup Modal -->
+  <!-- MOVIE POPUP -->
   <div id="modalOverlay" class="overlay hidden">
     <div class="modal modalBig">
       <button id="closeModal" class="closeBtn">✕</button>
@@ -84,17 +79,14 @@
 
       <div class="modalHeader">
         <h2 id="modalTitle">Movie Name</h2>
-        <p id="modalCategory" class="muted">Category</p>
       </div>
 
-      <!-- Trailer Preview Card (tap to open full trailer screen) -->
-      <button id="openTrailerScreen" class="trailerCard">
-        <div class="trailerIcon">▶</div>
-        <div class="trailerText">
-          <div class="trailerTitle">Play Trailer</div>
-          <div class="mutedSmall">Tap to open full screen</div>
+      <!-- Trailer Preview (tap to play full screen) -->
+      <div class="playerWrap">
+        <div id="trailerTapArea" class="trailerTapArea">
+          <div class="playBadge">▶ Tap to play trailer</div>
         </div>
-      </button>
+      </div>
 
       <div class="modalActions">
         <button id="shareBtn" class="btn btnDark">⤴ Share</button>
@@ -103,14 +95,12 @@
     </div>
   </div>
 
-  <!-- Fullscreen Trailer Screen -->
+  <!-- TRAILER SCREEN -->
   <div id="trailerOverlay" class="overlay hidden">
     <div class="modal modalBig">
       <button id="closeTrailer" class="closeBtn">✕</button>
-
       <div class="modalHeader">
         <h2 id="trailerTitle">Trailer</h2>
-        <p class="muted">Tap close to go back</p>
       </div>
 
       <div class="playerWrap">
@@ -120,7 +110,7 @@
           src=""
           title="Trailer"
           frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowfullscreen
         ></iframe>
       </div>
@@ -129,7 +119,7 @@
 
   <!-- 18+ Confirm -->
   <div id="adultOverlay" class="overlay hidden">
-    <div class="modal adultCenter">
+    <div class="modal adultConfirm">
       <div class="modalHeader">
         <h2>18+ Content</h2>
         <p class="muted">Are you sure you want to continue?</p>
@@ -142,7 +132,55 @@
     </div>
   </div>
 
-  <!-- Request Screen (Direct Worker) -->
+  <!-- UPLOAD SCREEN -->
+  <div id="uploadOverlay" class="overlay hidden">
+    <div class="modal modalBig">
+      <button id="closeUpload" class="closeBtn">✕</button>
+
+      <div class="modalHeader">
+        <h2>Upload Movie</h2>
+        <p class="muted">4 fields only (Name, Category, Banner, Trailer, Download)</p>
+      </div>
+
+      <div class="form">
+        <label>
+          Movie Name *
+          <input id="upName" type="text" placeholder="Movie name..." />
+        </label>
+
+        <label>
+          Category *
+          <select id="upCategory">
+            <option value="BOLLYWOOD">BOLLYWOOD</option>
+            <option value="HOLLYWOOD">HOLLYWOOD</option>
+            <option value="ADULT">18+</option>
+          </select>
+        </label>
+
+        <label>
+          Banner Upload *
+          <input id="upPoster" type="file" accept="image/*" />
+        </label>
+
+        <label>
+          Trailer Link *
+          <input id="upTrailer" type="url" placeholder="https://youtube.com/..." />
+        </label>
+
+        <label>
+          Download Link *
+          <input id="upDownload" type="url" placeholder="https://..." />
+        </label>
+
+        <button id="uploadBtn" class="btn btnGold">Upload</button>
+        <button id="cancelUploadBtn" class="btn btnDark">Cancel</button>
+
+        <div id="uploadStatus" class="muted" style="margin-top:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REQUEST SCREEN -->
   <div id="requestOverlay" class="overlay hidden">
     <div class="modal modalBig">
       <button id="closeRequest" class="closeBtn">✕</button>
@@ -159,72 +197,19 @@
         </label>
 
         <label>
-          Photo Upload (optional)
+          Screenshot Upload (optional)
           <input id="reqPhotoFile" type="file" accept="image/*" />
         </label>
 
         <label>
-          Movie URL (optional)
+          Movie Link (optional)
           <input id="reqMovieUrl" type="url" placeholder="https://..." />
         </label>
 
         <button id="sendRequestBtn" class="btn btnGold">Send Request</button>
         <button id="cancelRequestBtn" class="btn btnDark">Cancel</button>
 
-        <div id="requestStatus" class="mutedSmall" style="margin-top:10px;"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Upload Screen (4 Fields + Category + Passcode) -->
-  <div id="uploadOverlay" class="overlay hidden">
-    <div class="modal modalBig">
-      <button id="closeUpload" class="closeBtn">✕</button>
-
-      <div class="modalHeader">
-        <h2>Upload Movie</h2>
-        <p class="muted">Passcode protected upload</p>
-      </div>
-
-      <div class="form">
-        <label>
-          4 Digit Passcode *
-          <input id="uploadPasscode" type="password" maxlength="4" inputmode="numeric" placeholder="0001" />
-        </label>
-
-        <label>
-          Movie Name *
-          <input id="upMovieName" type="text" placeholder="Movie name" />
-        </label>
-
-        <label>
-          Category *
-          <select id="upCategory">
-            <option value="BOLLYWOOD">Bollywood</option>
-            <option value="HOLLYWOOD">Hollywood</option>
-            <option value="ADULT">18+</option>
-          </select>
-        </label>
-
-        <label>
-          Banner Upload *
-          <input id="upPosterFile" type="file" accept="image/*" />
-        </label>
-
-        <label>
-          Trailer Link *
-          <input id="upTrailerUrl" type="url" placeholder="https://youtube.com/..." />
-        </label>
-
-        <label>
-          Download Link *
-          <input id="upDownloadUrl" type="url" placeholder="https://..." />
-        </label>
-
-        <button id="uploadMovieBtn" class="btn btnGold">Upload</button>
-        <button id="cancelUploadBtn" class="btn btnDark">Cancel</button>
-
-        <div id="uploadStatus" class="mutedSmall" style="margin-top:10px;"></div>
+        <div id="reqStatus" class="muted" style="margin-top:10px;"></div>
       </div>
     </div>
   </div>
