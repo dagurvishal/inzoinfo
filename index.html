@@ -6,24 +6,23 @@
   <title>INZO WORLD</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
 
-  <!-- Background Wallpaper -->
+  <!-- Background wallpaper -->
   <div class="wallpaper"></div>
   <div class="wallpaperBlur"></div>
 
-  <!-- HEADER -->
-  <header class="topbar">
+  <!-- Top Header -->
+  <header class="topHeader">
     <!-- Center Logo -->
     <div class="logoCenter">
       <div class="logoText">INZO <span>WORLD</span></div>
-      <div class="logoLine"></div>
+      <div class="logoSub">Movie Hub</div>
     </div>
 
-    <!-- Menu + Search Row -->
-    <div class="headerRow">
-      <button id="menuBtn" class="menuBtn">☰</button>
+    <!-- Row under logo: left menu + right search -->
+    <div class="topRow">
+      <button id="menuBtn" class="menuBtn" aria-label="Open Menu">☰</button>
 
       <div class="searchWrap">
         <div class="searchBox">
@@ -35,42 +34,42 @@
     </div>
   </header>
 
-  <!-- SIDE MENU -->
-  <div id="sideMenuOverlay" class="sideMenuOverlay hidden">
-    <div class="sideMenu">
-      <div class="sideMenuTop">
-        <div class="sideMenuTitle">INZO WORLD</div>
-        <button id="closeMenuBtn" class="closeMenuBtn">✕</button>
-      </div>
+  <!-- Side Menu -->
+  <div id="sideOverlay" class="sideOverlay hidden"></div>
 
-      <div class="menuSection">
-        <button class="menuItem active" data-menu="home">🏠 Home</button>
-        <button class="menuItem" data-menu="upload">⬆ Upload</button>
-        <button class="menuItem" data-menu="request">📩 Request</button>
-      </div>
-
-      <div class="menuDivider"></div>
-
-      <div class="menuSection">
-        <div class="menuLabel">Categories</div>
-        <button class="menuItem tabBtn active" data-tab="BOLLYWOOD">🎬 Bollywood</button>
-        <button class="menuItem tabBtn" data-tab="HOLLYWOOD">🍿 Hollywood</button>
-        <button class="menuItem tabBtn" data-tab="ADULT">🔞 18+</button>
-      </div>
+  <aside id="sideMenu" class="sideMenu hidden">
+    <div class="sideTop">
+      <div class="sideTitle">INZO WORLD</div>
+      <button id="closeMenuBtn" class="closeMenuBtn">✕</button>
     </div>
-  </div>
 
-  <!-- MAIN -->
+    <div class="sideSection">
+      <div class="sideLabel">Categories</div>
+
+      <button class="sideItem catBtn active" data-cat="BOLLYWOOD">Bollywood</button>
+      <button class="sideItem catBtn" data-cat="HOLLYWOOD">Hollywood</button>
+      <button class="sideItem catBtn" data-cat="ADULT">18+ Adult</button>
+    </div>
+
+    <div class="sideSection">
+      <div class="sideLabel">Actions</div>
+      <button id="openUpload" class="sideItem">Upload Movie</button>
+      <button id="openRequest" class="sideItem">Request Movie</button>
+    </div>
+  </aside>
+
   <main class="container">
-    <div id="skeletonGrid" class="grid"></div>
-    <div id="moviesGrid" class="grid"></div>
+
+    <!-- Movies List -->
+    <div id="skeletonGrid" class="movieList"></div>
+    <div id="moviesGrid" class="movieList"></div>
 
     <div id="emptyState" class="emptyState hidden">
-      No movies found.
+      No movies found. Try another search.
     </div>
   </main>
 
-  <!-- MOVIE POPUP -->
+  <!-- Movie Popup Modal -->
   <div id="modalOverlay" class="overlay hidden">
     <div class="modal modalBig">
       <button id="closeModal" class="closeBtn">✕</button>
@@ -81,24 +80,21 @@
         <h2 id="modalTitle">Movie Name</h2>
       </div>
 
-      <!-- Trailer Preview (tap to play full screen) -->
-      <div class="playerWrap">
-        <div id="trailerTapArea" class="trailerTapArea">
-          <div class="playBadge">▶ Tap to play trailer</div>
-        </div>
-      </div>
+      <!-- Trailer button (no autoplay) -->
+      <button id="openTrailerBtn" class="btn btnDark fullBtn">▶ Play Trailer</button>
 
       <div class="modalActions">
         <button id="shareBtn" class="btn btnDark">⤴ Share</button>
-        <button id="downloadBtn" class="btn btnGold">⬇ Download</button>
+        <button id="downloadOpenBtn" class="btn btnGold">⬇ Download</button>
       </div>
     </div>
   </div>
 
-  <!-- TRAILER SCREEN -->
+  <!-- Trailer Screen -->
   <div id="trailerOverlay" class="overlay hidden">
     <div class="modal modalBig">
       <button id="closeTrailer" class="closeBtn">✕</button>
+
       <div class="modalHeader">
         <h2 id="trailerTitle">Trailer</h2>
       </div>
@@ -110,16 +106,30 @@
           src=""
           title="Trailer"
           frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowfullscreen
         ></iframe>
       </div>
     </div>
   </div>
 
-  <!-- 18+ Confirm -->
+  <!-- Download Popup -->
+  <div id="dlOverlay" class="overlay hidden">
+    <div class="modal">
+      <button id="closeDl" class="closeBtn">✕</button>
+
+      <div class="modalHeader">
+        <h2>Download</h2>
+        <p class="muted">One default download link.</p>
+      </div>
+
+      <button id="downloadBtn" class="btn btnGold fullBtn">⬇ Download Now</button>
+    </div>
+  </div>
+
+  <!-- Adult Confirm -->
   <div id="adultOverlay" class="overlay hidden">
-    <div class="modal adultConfirm">
+    <div class="modal">
       <div class="modalHeader">
         <h2>18+ Content</h2>
         <p class="muted">Are you sure you want to continue?</p>
@@ -132,14 +142,14 @@
     </div>
   </div>
 
-  <!-- UPLOAD SCREEN -->
+  <!-- Upload Modal (4 options + category) -->
   <div id="uploadOverlay" class="overlay hidden">
-    <div class="modal modalBig">
+    <div class="modal">
       <button id="closeUpload" class="closeBtn">✕</button>
 
       <div class="modalHeader">
         <h2>Upload Movie</h2>
-        <p class="muted">4 fields only (Name, Category, Banner, Trailer, Download)</p>
+        <p class="muted">Only 4 fields + category.</p>
       </div>
 
       <div class="form">
@@ -151,9 +161,9 @@
         <label>
           Category *
           <select id="upCategory">
-            <option value="BOLLYWOOD">BOLLYWOOD</option>
-            <option value="HOLLYWOOD">HOLLYWOOD</option>
-            <option value="ADULT">18+</option>
+            <option value="BOLLYWOOD">Bollywood</option>
+            <option value="HOLLYWOOD">Hollywood</option>
+            <option value="ADULT">18+ Adult</option>
           </select>
         </label>
 
@@ -172,44 +182,38 @@
           <input id="upDownload" type="url" placeholder="https://..." />
         </label>
 
-        <button id="uploadBtn" class="btn btnGold">Upload</button>
-        <button id="cancelUploadBtn" class="btn btnDark">Cancel</button>
-
-        <div id="uploadStatus" class="muted" style="margin-top:10px;"></div>
+        <button id="saveUploadBtn" class="btn btnGold fullBtn">Save Movie</button>
       </div>
     </div>
   </div>
 
-  <!-- REQUEST SCREEN -->
+  <!-- Request Modal (Direct Worker) -->
   <div id="requestOverlay" class="overlay hidden">
-    <div class="modal modalBig">
+    <div class="modal">
       <button id="closeRequest" class="closeBtn">✕</button>
 
       <div class="modalHeader">
-        <h2>Request a Movie</h2>
-        <p class="muted">Direct Telegram request (no Supabase)</p>
+        <h2>Request Movie</h2>
+        <p class="muted">Direct Telegram request.</p>
       </div>
 
       <div class="form">
         <label>
           Movie Name *
-          <input id="reqMovieName" type="text" placeholder="Pathaan" />
+          <input id="reqMovieName" type="text" placeholder="Movie name..." />
         </label>
 
         <label>
-          Screenshot Upload (optional)
+          Photo (optional)
           <input id="reqPhotoFile" type="file" accept="image/*" />
         </label>
 
         <label>
-          Movie Link (optional)
+          Movie URL (optional)
           <input id="reqMovieUrl" type="url" placeholder="https://..." />
         </label>
 
-        <button id="sendRequestBtn" class="btn btnGold">Send Request</button>
-        <button id="cancelRequestBtn" class="btn btnDark">Cancel</button>
-
-        <div id="reqStatus" class="muted" style="margin-top:10px;"></div>
+        <button id="sendRequestBtn" class="btn btnGold fullBtn">Send Request</button>
       </div>
     </div>
   </div>
